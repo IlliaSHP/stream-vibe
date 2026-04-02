@@ -1,0 +1,6 @@
+.logo {
+  width: adapt(199, 116);
+  aspect-ratio: 199 / 60;
+  height: auto;
+  display: block;  // прибирає зайвий відступ знизу як у inline елементів
+}

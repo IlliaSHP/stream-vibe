@@ -1,0 +1,46 @@
+:root {
+  --main-color: #fff;
+  --main-bg-color: #141414;
+
+  --shadow-header: 15px;
+
+  --color-white: #FFFFFF;
+  --color-black: #000000;
+
+  --color-dark-1: #1A1A1A;
+  --color-dark-2: #0F0F0F;
+
+  --color-gray-1: #262626;
+  --color-gray-2: #D9D9D9;
+  --color-gray-3: #B3B3B3;
+  --color-gray-4: #757575;
+
+  --border: 3px solid var(--color-gray-1);
+  --border-radius: 6px;
+  --border-radius-2: 8px;
+  --border-radius-3: 10px;
+
+  --box-shadow: 0 4px 4px -4px rgba(12, 12, 13, 0.05), 0 16px 32px -4px rgba(12, 12, 13, 0.1);
+
+  --input-height: 40px;
+
+  --transition-duration: 0.2s;
+
+
+  //* z-index:
+  /* Числова градація для простих випадків */
+  --z-1: 1;
+  --z-2: 2;
+  --z-3: 3;
+  --z-4: 4;
+  --z-5: 5;
+
+  /* Семантичні шари для важливих елементів */
+  --z-header: 100;
+//  --z-dropdown: 100;
+//  --z-sticky: 200;
+//  --z-header: 300;
+//  --z-overlay: 400;
+//  --z-modal: 500;
+//  --z-toast: 600;
+}

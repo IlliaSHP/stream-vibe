@@ -1,0 +1,245 @@
+@use "sass:math";
+@use "sass:map";
+@use "sass:list";
+@use "sass:meta";
+@use "@styles/settings" as settings;
+
+//* Міксин для адаптивного зменшення тільки px,
+//* Без присвоєння назви властивості.
+
+// Адаптивна функція для значення (повертає clamp)
+@function adaptiveValueOnly($startSize, $minSize: settings.$minSize, $keepSize: 0, $widthFrom: settings.$containerWidth, $widthTo: settings.$minWidth) {
+  @if ($startSize == 0) {
+    $startSize: 0.000001;
+  }
+  @if ($minSize == 0) {
+    $minSize: 0.000001;
+  }
+  @if ($widthFrom == settings.$containerWidth and settings.$maxWidthContainer == 0) {
+    $widthFrom: settings.$maxWidth;
+  }
+
+  // Формула плаваючого значення
+  $slope: math.div(($startSize - $minSize), ($widthFrom - $widthTo));
+  $yIntersection: -$widthTo * $slope + $minSize;
+  @if ($yIntersection == 0) {
+    $yIntersection: 0.000001;
+  }
+
+  $flyValue: calc(#{$yIntersection}px + #{$slope * 100}vw);
+
+  // Обчислюємо значення
+  @if ($minSize > $startSize) {
+    @return clamp(#{$startSize}px, #{$flyValue}, #{$minSize}px);
+  } @else {
+    @return clamp(#{$minSize}px, #{$flyValue}, #{$startSize}px);
+  }
+}
+
+
+@mixin hover() {
+  html:not([data-fls-touch]) &{
+    @media (any-hover: hover), (pointer: fine) {
+      &:hover{
+        @content;
+      }
+    }
+  }
+  html[data-fls-touch] & {
+    &:active {
+      @media (hover: none) {
+        @content;
+      }
+    }
+  }
+}
+
+
+// ============================================
+// adapt.scss
+// ============================================
+// Базове значення для обчислення мультиплікатора (px)
+$scaleBase: 2;
+// базові діапазони (від container)
+$base-ranges: (
+  'tablet': settings.$tablet,
+  'mobile': settings.$mobile,
+  'mobileSmall': settings.$mobileSmall,
+  'minTemplate': settings.$minTemplate,
+  'minWidth': settings.$minWidth,
+);
+
+// ============================================
+// ПРАВИЛО ІМЕНУВАННЯ
+// ============================================
+// 1. Прості діапазони (від container) - БЕЗ префіксу $r-
+//    Використовуй: $mobile, $tablet, $cartRebuild
+//
+// 2. Парні діапазони (кастомні межі) - З префіксом $r-
+//    Використовуй: $r-tablet-minTemplate, $r-cart-mobile
+
+
+// Кастомні діапазони (від container)
+$custom-ranges: (
+  // 'rebuildProductSlider': settings.$rebuildProductSlider,
+  // 'cartRebuild': settings.$cartRebuild,
+);
+
+// Парні діапазони (ТІЛЬКИ ТУТ використовуємо $r-)
+$custom-range-pairs: (
+  'tablet-minWidth': (settings.$tablet, settings.$minWidth),
+  'mobile-minWidth': (settings.$mobile, settings.$minWidth),
+  'mobile-mobileSmall': (settings.$mobile, settings.$minWidth),
+  'mobileSmall-minWidth': (settings.$mobileSmall, settings.$minWidth),
+  'tablet-minTemplate': (settings.$tablet, settings.$minTemplate),
+  'mobile-minTemplate': (settings.$mobile, settings.$minTemplate),
+);
+
+//* Змінні ТІЛЬКИ для парних діапазонів
+$r-tablet-minTemplate: 'tablet-minTemplate';
+$r-tablet-minWidth: 'tablet-minWidth';
+
+$r-mobile-minTemplate: 'mobile-minTemplate';
+$r-mobile-mobileSmall: 'mobile-mobileSmall';
+$r-mobile-minWidth: 'mobile-minWidth';
+
+$r-mobileSmall-minWidth: 'mobileSmall-minWidth';
+
+$all-ranges: map.merge($base-ranges, $custom-ranges);
+/* Результат $all-ranges
+   (
+      'tablet': 991.98,
+      'mobile': 767.98,
+      'mobileSmall': 479.98,
+      'minTemplate': 375,
+      'minWidth': 320,
+      'rebuildProductSlider': 880.98,
+   )
+*/
+
+:root {
+  @each $name, $breakpoint in $all-ranges {
+    --scale-#{$name}: #{adaptiveValueOnly($scaleBase, 0, 0, settings.$containerWidth, $breakpoint)};
+  }
+
+  @each $name, $pair in $custom-range-pairs {
+    $start: list.nth($pair, 1);
+    $end: list.nth($pair, 2);
+    --scale-#{$name}: #{adaptiveValueOnly($scaleBase, 0, 0, $start, $end)};
+  }
+}
+
+/* 🔍 Чи навантажує браузер перевірками?
+   НІ, абсолютно не навантажує! ✅
+   Чому:
+   Всі ці перевірки (@if, @each, map-has-key) виконуються під час компіляції SCSS → CSS, а НЕ в браузері!
+
+   Браузер бачить тільки фінальний CSS - жодних умов, циклів чи мап там немає.
+   Тому нуль навантаження на продакшені! 🚀
+*/
+@function adapt($max, $min, $range: settings.$minWidth) {
+  $diff: $max - $min;
+  $mult: math.div($diff, $scaleBase);
+
+  @if $mult == 0 {
+    @return #{$min}px;
+  }
+  // ============================================
+  // ОПТИМІЗАЦІЯ: Якщо рядок починається з літери - шукаємо ТІЛЬКИ в парах
+  // ============================================
+  @if meta.type-of($range) == 'string' {
+    // Перевіряємо тільки в парних діапазонах
+    @if not map.has-key($custom-range-pairs, $range) {
+      @error "❌ ПОМИЛКА adapt(): Парний діапазон '#{$range}' не існує! " +
+                "Доступні парні діапазони: #{map.keys($custom-range-pairs)}";
+    }
+    @return calc(#{$min}px + (var(--scale-#{$range}) * #{$mult}));
+  }
+
+  // ============================================
+  // Якщо число - шукаємо ТІЛЬКИ в простих діапазонах
+  // ============================================
+  @if meta.type-of($range) == 'number' {
+    $range-name: null;
+
+    @each $name, $value in $base-ranges {
+      @if $value == $range {
+        $range-name: $name;
+      }
+    }
+
+    @if $range-name == null {
+      @each $name, $value in $custom-ranges {
+        @if $value == $range {
+          $range-name: $name;
+        }
+      }
+    }
+
+    @if $range-name == null {
+      @error "❌ ПОМИЛКА adapt(): Брейкпоінт #{$range}px не знайдено! " +
+                "Додай його в $base-ranges або $custom-ranges. " +
+                "Доступні: #{map.keys($all-ranges)}";
+    }
+
+    @return calc(#{$min}px + (var(--scale-#{$range-name}) * #{$mult}));
+  }
+}
+
+
+
+//* ====================== Використання ======================
+/*
+📋 Покрокова інструкція для твоїх змінних
+*Крок 1: Додай змінні в settings.scss
+
+$cartRebuild: 900.98;
+$cartRebuildMobile: 700.98;
+
+
+*Крок 2: Додай прості діапазони в adapt.scss
+
+Для використання окремо (від container до брейкпоінту)
+$custom-ranges: (
+   'cartRebuild': settings.$cartRebuild,           // від container до 900.98
+   'cartRebuildMobile': settings.$cartRebuildMobile, // від container до 700.98
+);
+
+
+*Крок 3: Додай парний діапазон (якщо потрібен)
+$custom-range-pairs: (
+   'tablet-minTemplate': (settings.$tablet, settings.$minTemplate),
+   'cartRebuild-cartRebuildMobile': (settings.$cartRebuild, settings.$cartRebuildMobile), // від 900.98 до 700.98
+);
+
+Створи $r- (тільки для пар) змінну для автокомпліту
+$r-cartRebuild-cartRebuildMobile: 'cartRebuild-cartRebuildMobile';
+
+
+*Крок 4: Використовуй!
+
+.cart {
+   ✅ Від container (1200) до cartRebuildMobile (700.98)
+   padding: adapt(40, 20, $cartRebuildMobile);
+
+   ✅ Від container (1200) до cartRebuild (900.98)
+   gap: adapt(30, 15, $cartRebuild);
+
+   ✅ Від cartRebuild (900.98) до cartRebuildMobile (700.98)
+   margin: adapt(24, 12, $r-cartRebuild-cartRebuildMobile);
+}
+
+
+
+*Використання:
+   ✅ Прості діапазони (від container) - через змінні
+   padding: adapt(40, 20, $cartRebuild);        // 900.98
+   gap: adapt(30, 15, $cartRebuildMobile);      // 700.98
+   margin: adapt(24, 12, $mobile);              // 767.98
+
+   ✅ Парні діапазони - через $r-
+   font-size: adapt(32, 24, $r-cart-mobile);    // від 900.98 до 700.98
+   border-radius: adapt(20, 12, $r-tablet-minTemplate); // від 991.98 до 375
+
+
+*/

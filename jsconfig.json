@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@styles/*": ["src/app/styles/*"],
+      "@fonts/*": ["src/app/styles/fonts/*"]
+    }
+  },
+  "include": ["src"]
+}

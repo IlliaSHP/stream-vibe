@@ -1,0 +1,20 @@
+// Завжди йде в bundle - використовувати тільки
+// справді загльні стилі
+
+// visually-hidden надійніший.
+// Деякі перекладачі (Google Translate) ігнорують aria-label.
+// Але використовувати aria-label та цей клас одночасно — зайве,
+// скрінрідер прочитає двічі.
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  margin: -1px !important;
+  border: 0 !important;
+  padding: 0 !important;
+  white-space: nowrap !important;
+  clip-path: inset(100%) !important;
+  clip: rect(0 0 0 0) !important;
+  overflow: hidden !important;
+}

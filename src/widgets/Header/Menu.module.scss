@@ -1,0 +1,223 @@
+:root {
+	--lite: #fff;
+	--dark-80: rgba(var(--color-dark-1) 0.8);
+}
+
+.headerMenu {
+  @media (max-width: toEm($mobile)) {
+		position: fixed;
+		width: 100%;
+		height: 100vh;	//!Тут завжди vh, тому що є плашка браузера, яка також рахується як viewport
+		right: calc(-100% - var(--shadow-header));
+		top: 0%;
+		overflow: auto;
+		padding: 50px 15px 30px 15px;
+		padding-top: 120px;
+		background-color: var(--dark-80);
+		transition: right 0.6s, padding .3s, top 0.3s;
+    .--header-scroll & {
+    }
+    [data-fls-menu-open] & {
+      right: 0;
+    }
+	}
+
+  &List {
+    position: relative; // потрібно для абсолютного позиціонування підсвітки
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    text-transform: capitalize;
+    background-color: var(--color-dark-2);
+    border: var(--border);
+    border-radius: var(--border-radius-3);
+    @media (min-width: toEm($mobile)) {
+      padding: 8px;
+    }
+    @media (max-width: toEm($mobile)) {
+			font-size: 22px;
+			flex-direction: column;
+			text-align: right;
+			align-items: flex-end;
+		}
+
+    //@for $i from 1 through 4 {
+		//	$delay: .4s + ($i - 1) * 0.1s;
+		//	[data-fls-menu-open] &>:nth-child(#{$i}) {
+		//		transition: transform 0.5s #{$delay}, opacity 0.5s #{$delay};
+		//	}
+		//}
+
+    &>.headerMenuItem {
+			@media (max-width:toEm($mobile)){
+				transform: translateX(60px);
+				opacity: 0;
+				transition: .3s transform, .3s opacity;
+				[data-fls-menu-open] & {
+					transform: translateX(0);
+					opacity: 1;
+          transition:
+            transform 0.5s calc(0.4s + var(--i) * 0.1s),
+            opacity   0.5s calc(0.4s + var(--i) * 0.1s);
+				}
+			}
+		}
+  }
+  &Item {
+    display: flex;
+		align-items: center;
+    position: relative;
+  }
+  &Link {
+    display: flex;
+		align-items: center;
+		gap: 4px;
+    padding-inline: 20px;
+    padding-block: 12px;
+
+    &Active {}
+  }
+}
+
+.headerMenuHighlight {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  height: calc(100% - (var(--border-radius-2) * 2));
+  border-radius: var(--border-radius-2);
+  background-color: var(--color-dark-1);
+  pointer-events: none;
+
+  // Ключова зміна: пружинний easing замість cubic-bezier
+  transition:
+    left 800ms linear(
+        0,
+        0.029 1.6%, 0.123 3.5%,
+        0.651 10.6%, 0.862 14.1%,
+        1.002 17.7%, 1.046 19.6%,
+        1.074 21.6%, 1.087 23.9%,
+        1.086 26.6%, 1.014 38.5%,
+        0.994 46.3%, 1
+    ),
+    width 500ms linear(
+        0,
+        0.029 1.6%, 0.123 3.5%,
+        0.651 10.6%, 0.862 14.1%,
+        1.002 17.7%, 1.046 19.6%,
+        1.074 21.6%, 1.087 23.9%,
+        1.086 26.6%, 1.014 38.5%,
+        0.994 46.3%, 1
+    ),
+    opacity 200ms ease,
+    border-radius 300ms ease; // для ефекту "squircle" при першому/останньому
+}
+
+
+
+.menuIcon {
+  order: 1;
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  border: var(--border);
+  border-radius: var(--border-radius);
+
+  @media (max-width: toEm($mobile)) {
+    display: block;
+    z-index: var(--z-5);
+    @media (any-hover: none) {
+      cursor: default;
+    }
+    svg {
+      height: 26px;
+      display: block;
+      transition: transform 600ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    [data-fls-menu-open] & svg {
+      transform: rotate(-45deg);
+    }
+  }
+}
+
+.line {
+  fill: none;
+  stroke: $mainColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 3;
+  transition:
+    stroke-dasharray 600ms cubic-bezier(0.4, 0, 0.2, 1),
+    stroke-dashoffset 600ms cubic-bezier(0.4, 0, 0.2, 1),
+    transform 600ms;
+}
+
+.lineTopBottom {
+  stroke-dasharray: 12 63;
+
+  [data-fls-menu-open] & {
+    stroke-dasharray: 20 300;
+    stroke-dashoffset: -32.42;
+  }
+}
+
+
+
+
+
+
+//
+////Burger Icon
+//.menuIcon {
+//  order: 1;
+//
+//  display: none;
+//  @media (max-width: toEm($mobile)) {
+//    display: block;
+//    position: relative;
+//    width: 18px;
+//    height: 14px;
+//    z-index: var(--z-5);
+//    @media (any-hover: none) {
+//      cursor: default;
+//    }
+//    span,
+//    &::before,
+//    &::after {
+//      content: "";
+//      transition: all 0.3s ease 0s;
+//      right: 0;
+//      position: absolute;
+//      width: 100%;
+//      height: 2px;
+//      background-color: $mainColor;
+//    }
+//    &::before {
+//      top: 0;
+//    }
+//    &::after {
+//      bottom: 0;
+//    }
+//    span {
+//      top: calc(50% - 1px);
+//    }
+//    [data-fls-menu-open] & {
+//      span {
+//        width: 0;
+//      }
+//      &::before,
+//      &::after {
+//      }
+//      &::before {
+//        top: calc(50% - 1px);
+//        transform: rotate(-45deg);
+//      }
+//      &::after {
+//        bottom: calc(50% - 1px);
+//        transform: rotate(45deg);
+//      }
+//    }
+//  }
+//}
