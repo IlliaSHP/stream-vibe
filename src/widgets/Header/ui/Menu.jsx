@@ -2,7 +2,9 @@ import styles from '../Menu.module.scss'
 import clsx from 'clsx'
 import { NavLink } from 'react-router-dom'
 import { useMenuOpen } from '@/widgets/Header/model/useMenuInit'
-import {useMenuHighlight} from '@/widgets/Header/model/useMenuHighlight'
+import { useMenuHighlight } from '@/widgets/Header/model/useMenuHighlight'
+import { useMoveBarToActive } from '@/widgets/Header/model/useMoveBarToActive'
+import { useIsMobile } from '@/shared/lib/useIsMobile'
 
 const navLinks = [
   { to: '/', label: 'Home' },
@@ -15,8 +17,10 @@ const Menu = () => {
   const { isOpen, toggle } = useMenuOpen()
   const { listRef, highlight, moveHighlight, hideHighlight } = useMenuHighlight(
     styles.headerMenuLinkActive,
-    "persistent"
+    "persistent",
   )
+  const { activeBar } = useMoveBarToActive(listRef)
+  const isMobile = useIsMobile()
 
   return (
     <>
@@ -46,25 +50,54 @@ const Menu = () => {
           className={styles.headerMenuList}
           onMouseLeave={hideHighlight}
         >
-          {/* підсвітка яка переміщується */}
+          {/* Верхня плашка */}
           <span
-            className={styles.headerMenuHighlight}
+            className={styles.headerMenuBar}
             style={{
-              left: highlight.left,
-              width: highlight.width,
-              opacity: highlight.opacity,
+              ...(isMobile
+                  ? { top: activeBar.top, height: activeBar.height, left: activeBar.left, }
+                  : { left: activeBar.left, width: activeBar.width }
+              ),
             }}
           />
+          {/* Підсвітка (фон) з обгорткою */}
+          <div className={styles.headerMenuHighlightWrap}>
+            <span
+              className={styles.headerMenuHighlight}
+              style={{
+                ...(!isMobile ? {
+                    left: highlight.left,
+                    top: highlight.top,
+                    width: highlight.width,
+                    height: highlight.height,
+                  }
+                  : undefined
+                ),
+                opacity: isMobile ? 0 : highlight.opacity,
+              }}
+            />
+          </div>
+          {/* Нижня плашка */}
+          <span
+            className={clsx(styles.headerMenuBar, styles.headerMenuBarBottom)}
+            style={{
+              ...(isMobile
+                  ? { top: activeBar.top, height: activeBar.height }
+                  : { left: activeBar.left, width: activeBar.width }
+              ),
+            }}
+          />
+
           {navLinks.map(({ to, label }, index) => (
             <li
               key={to}
               className={styles.headerMenuItem}
               style={{ '--i': index }}
               onMouseEnter={(e) => moveHighlight(e.currentTarget)}
-              // onClick={(e) => moveHighlight(e.currentTarget)}
             >
               <NavLink
                 to={to}
+                end={to === '/'}
                 className={({ isActive }) => clsx(
                   styles.headerMenuLink,
                   isActive && styles.headerMenuLinkActive

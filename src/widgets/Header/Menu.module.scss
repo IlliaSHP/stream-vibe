@@ -1,6 +1,5 @@
 :root {
-	--lite: #fff;
-	--dark-80: rgba(var(--color-dark-1) 0.8);
+	--dark-80: rgb(var(--color-dark-1) / 0.8);
 }
 
 .headerMenu {
@@ -12,7 +11,7 @@
 		top: 0%;
 		overflow: auto;
 		padding: 50px 15px 30px 15px;
-		padding-top: 120px;
+		padding-top: 115px;
 		background-color: var(--dark-80);
 		transition: right 0.6s, padding .3s, top 0.3s;
     .--header-scroll & {
@@ -23,19 +22,20 @@
 	}
 
   &List {
-    position: relative; // потрібно для абсолютного позиціонування підсвітки
+    position: relative;
     display: flex;
+    justify-content: center;
     flex-wrap: wrap;
     gap: 5px;
     text-transform: capitalize;
-    background-color: var(--color-dark-2);
-    border: var(--border);
-    border-radius: var(--border-radius-3);
     @media (min-width: toEm($mobile)) {
-      padding: 8px;
+      background-color: var(--color-dark-2);
+      outline: var(--border);
+      border-radius: var(--border-radius-3);
+      padding: 10px;
     }
     @media (max-width: toEm($mobile)) {
-			font-size: 22px;
+			font-size: 20px;
 			flex-direction: column;
 			text-align: right;
 			align-items: flex-end;
@@ -64,52 +64,102 @@
 		}
   }
   &Item {
-    display: flex;
-		align-items: center;
     position: relative;
   }
   &Link {
-    display: flex;
-		align-items: center;
-		gap: 4px;
     padding-inline: 20px;
     padding-block: 12px;
+    transition: color .3s;
+
+    @media (max-width: toEm($mobile)) {
+      padding-inline: 18px;
+      padding-block: 10px;
+      &[aria-current="page"] {
+        color: var(--color-accent);
+      }
+    }
 
     &Active {}
   }
 }
 
+
+.headerMenuBar {
+  --transition-menu-bar:
+    left 300ms cubic-bezier(0.4, 0, 0.2, 1),
+    width 300ms cubic-bezier(0.4, 0, 0.2, 1),
+    top 300ms cubic-bezier(0.4, 0, 0.2, 1),
+    height 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  position: absolute;
+  pointer-events: none;
+  background: var(--gradient-accent-horizontal);
+
+  height: var(--border-width);
+  top: calc(var(--border-width) * -1);
+  border-radius: 0 0 4px 4px;
+  transition:
+    var(--transition-menu-bar),
+    opacity 1000ms ease;
+
+  @media (max-width: toEm($mobile)) {
+    width: 3px;
+    height: auto;
+    left: 0;
+    top: auto;
+    border-radius: 0 4px 4px 0;
+    background: var(--gradient-accent-vertical);
+
+    opacity: 0;
+    [data-fls-menu-open] & {
+      transition:
+        var(--transition-menu-bar),
+        opacity 1000ms ease 600ms;
+      opacity: 1;
+    }
+  }
+}
+
+.headerMenuBarBottom {
+  top: auto;
+  bottom: calc(var(--border-width) * -1);
+  border-radius: 4px 4px 0 0;
+
+  @media (max-width: toEm($mobile)) {
+    left: auto;
+    right: 0;
+    bottom: auto;
+    border-radius: 4px 0 0 4px;
+  }
+}
+
 .headerMenuHighlight {
   position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  height: calc(100% - (var(--border-radius-2) * 2));
-  border-radius: var(--border-radius-2);
   background-color: var(--color-dark-1);
+  border-radius: var(--border-radius-2);
   pointer-events: none;
-
-  // Ключова зміна: пружинний easing замість cubic-bezier
   transition:
-    left 800ms linear(
-        0,
-        0.029 1.6%, 0.123 3.5%,
-        0.651 10.6%, 0.862 14.1%,
-        1.002 17.7%, 1.046 19.6%,
-        1.074 21.6%, 1.087 23.9%,
-        1.086 26.6%, 1.014 38.5%,
-        0.994 46.3%, 1
-    ),
-    width 500ms linear(
-        0,
-        0.029 1.6%, 0.123 3.5%,
-        0.651 10.6%, 0.862 14.1%,
-        1.002 17.7%, 1.046 19.6%,
-        1.074 21.6%, 1.087 23.9%,
-        1.086 26.6%, 1.014 38.5%,
-        0.994 46.3%, 1
-    ),
-    opacity 200ms ease,
-    border-radius 300ms ease; // для ефекту "squircle" при першому/останньому
+    left 1000ms linear(var(--ease-bubble)),
+    top 400ms ease,
+    width 800ms linear(var(--ease-bubble)),
+    height 300ms ease,
+    opacity 200ms ease;
+
+  @media (max-width: toEm($mobile)) {
+    // вертикальний режим — анімація по top і height
+    border-radius: var(--border-radius-2);
+    transition:
+      top 600ms linear(var(--ease-bubble)),
+      height 800ms linear(var(--ease-bubble)),
+      opacity 200ms ease;
+  }
+
+  &Wrap {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    border-radius: var(--border-radius-3); // такий самий як у ul
+  }
 }
 
 
@@ -123,6 +173,7 @@
   padding: 8px;
   border: var(--border);
   border-radius: var(--border-radius);
+  background-color: var(--color-dark-1);
 
   @media (max-width: toEm($mobile)) {
     display: block;

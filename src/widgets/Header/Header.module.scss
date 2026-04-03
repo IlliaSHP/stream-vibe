@@ -16,7 +16,7 @@
     transition: left 0.6s, height 0.5s;
   }
   &::before {
-    width: 100%; //Більше на 5% за after щоб не було видно тінь
+    width: 100%;
     background-color: var(--color-dark-1);
     z-index: 2;
   }

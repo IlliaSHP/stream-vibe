@@ -1,4 +1,5 @@
 import styles from '../Header.module.scss'
+import scroll from '../scroll.scss'
 import Icon from '@/shared/ui/Icon'
 import { Link } from 'react-router-dom'
 import Menu from './Menu'

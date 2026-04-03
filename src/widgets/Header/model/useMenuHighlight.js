@@ -2,36 +2,35 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { useLocation } from 'react-router-dom'
 
 /**
- * @param {string} activeLinkClass  — CSS-клас активного NavLink
  * @param {'opacity' | 'persistent'} mode
  *   'opacity'    — highlight з'являється при hover, зникає при виході
  *   'persistent' — highlight завжди видимий, при виході повертається до active
  */
 export function useMenuHighlight(activeLinkClass, mode = 'opacity') {
   const listRef = useRef(null)
-
-  // В 'persistent' opacity завжди 1, тому не кладемо його в стан
   const [highlight, setHighlight] = useState({
     left: 0,
+    top: 0,
     width: 0,
+    height: 0,
     opacity: mode === 'opacity' ? 0 : 1,
   })
 
   const moveHighlight = useCallback((el) => {
     if (!el || !listRef.current) return
-
     setHighlight(prev => ({
       ...prev,
       left: el.offsetLeft,
+      top: el.offsetTop,
       width: el.offsetWidth,
-      // opacity не чіпаємо — в 'persistent' він завжди 1
+      height: el.offsetHeight,
       ...(mode === 'opacity' && { opacity: 1 }),
     }))
   }, [mode])
 
   const getActiveEl = useCallback(() => {
     return listRef.current
-      ?.querySelector(`.${activeLinkClass}`)
+      ?.querySelector('[aria-current="page"]')
       ?.closest('li') ?? null
   }, [activeLinkClass])
 
@@ -43,12 +42,10 @@ export function useMenuHighlight(activeLinkClass, mode = 'opacity') {
 
   const hideHighlight = useCallback(() => {
     if (mode === 'persistent') {
-      // Завжди повертаємось до активного пункту
-      moveToActive()
+      // RAF щоб NavLink встиг оновити активний клас
+      requestAnimationFrame(moveToActive)
       return
     }
-
-    // 'opacity' режим: зникаємо якщо немає активного
     const activeEl = moveToActive()
     if (!activeEl) {
       setHighlight(prev => ({ ...prev, opacity: 0 }))

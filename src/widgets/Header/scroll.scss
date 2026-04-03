@@ -1,16 +1,7 @@
-:global([data-fls-header-scroll]) {
-  &:global(.--header-scroll) {
-
-  }
+:global(.--header-scroll) {
+  transition: translate 0.3s;
+  translate: 0px -100%;
 }
-
-
-:global([data-fls-header-scroll-show]) {
-  &:global(.--header-scroll) {
-    transition: translate 0.3s;
-    translate: 0px -100%;
-  }
-  &:global(.--header-show) {
-    translate: 0 0;
-  }
+:global(.--header-show) {
+  translate: 0 0;
 }
