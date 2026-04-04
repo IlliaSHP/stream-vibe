@@ -1,5 +1,5 @@
 import styles from '../Header.module.scss'
-import scroll from '../scroll.scss'
+import '../scroll.scss'
 import Icon from '@/shared/ui/Icon'
 import { Link } from 'react-router-dom'
 import Menu from './Menu'
@@ -28,6 +28,7 @@ const Header = () => {
           <Link
             to="/search-movie"
             className={styles.headerActionsLink}
+            aria-label="Search movies"
           >
             <Icon
               name="search"

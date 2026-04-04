@@ -123,3 +123,55 @@
     }
   }
 }
+
+
+
+// --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+@mixin hover() {
+  html:not([data-fls-touch]) & {
+    @media (any-hover: hover) {
+      &:hover {
+        @content;
+      }
+    }
+  }
+  html[data-fls-touch] & {
+    @media (hover: none) {
+      &:active {
+        @content;
+      }
+    }
+  }
+}
+// kebab-case
+@mixin hover-btn($active-scale: 0.95) {
+  // active scale — завжди, на всіх пристроях
+  &:not([aria-disabled="true"]):active {
+    scale: $active-scale;
+  }
+
+  // hover — тільки де є курсор
+  html:not([data-fls-touch]) & {
+    @media (any-hover: hover) {
+      &:hover {
+        @content;
+      }
+    }
+  }
+
+  // На тач — active замість hover, але scale вже є вище
+  html[data-fls-touch] & {
+    @media (hover: none) {
+      &:active {
+        @content;
+      }
+    }
+  }
+}
+
+@mixin disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

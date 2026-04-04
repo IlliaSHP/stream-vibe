@@ -6,7 +6,7 @@ import { useLocation } from 'react-router-dom'
  *   'opacity'    — highlight з'являється при hover, зникає при виході
  *   'persistent' — highlight завжди видимий, при виході повертається до active
  */
-export function useMenuHighlight(activeLinkClass, mode = 'opacity') {
+export function useMenuHighlight(mode = 'opacity') {
   const listRef = useRef(null)
   const [highlight, setHighlight] = useState({
     left: 0,
@@ -32,7 +32,7 @@ export function useMenuHighlight(activeLinkClass, mode = 'opacity') {
     return listRef.current
       ?.querySelector('[aria-current="page"]')
       ?.closest('li') ?? null
-  }, [activeLinkClass])
+  }, [])
 
   const moveToActive = useCallback(() => {
     const activeEl = getActiveEl()

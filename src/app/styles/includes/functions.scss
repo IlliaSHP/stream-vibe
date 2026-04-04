@@ -37,23 +37,6 @@
 }
 
 
-@mixin hover() {
-  html:not([data-fls-touch]) &{
-    @media (any-hover: hover), (pointer: fine) {
-      &:hover{
-        @content;
-      }
-    }
-  }
-  html[data-fls-touch] & {
-    &:active {
-      @media (hover: none) {
-        @content;
-      }
-    }
-  }
-}
-
 
 // ============================================
 // adapt.scss

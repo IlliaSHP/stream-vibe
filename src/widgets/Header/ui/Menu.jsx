@@ -16,7 +16,7 @@ const navLinks = [
 const Menu = () => {
   const { isOpen, toggle } = useMenuOpen()
   const { listRef, highlight, moveHighlight, hideHighlight } = useMenuHighlight(
-    styles.headerMenuLinkActive,
+    // styles.headerMenuLinkActive,
     "persistent",
   )
   const { activeBar } = useMoveBarToActive(listRef)
@@ -44,7 +44,7 @@ const Menu = () => {
         </svg>
       </button>
 
-      <nav className={styles.headerMenu}>
+      <nav className={styles.headerMenu} aria-label="Main navigation">
         <ul
           ref={listRef}
           className={styles.headerMenuList}
@@ -52,6 +52,7 @@ const Menu = () => {
         >
           {/* Верхня плашка */}
           <span
+            aria-hidden="true"
             className={styles.headerMenuBar}
             style={{
               ...(isMobile
@@ -61,7 +62,7 @@ const Menu = () => {
             }}
           />
           {/* Підсвітка (фон) з обгорткою */}
-          <div className={styles.headerMenuHighlightWrap}>
+          <div className={styles.headerMenuHighlightWrap} aria-hidden="true">
             <span
               className={styles.headerMenuHighlight}
               style={{
@@ -79,6 +80,7 @@ const Menu = () => {
           </div>
           {/* Нижня плашка */}
           <span
+            aria-hidden="true"
             className={clsx(styles.headerMenuBar, styles.headerMenuBarBottom)}
             style={{
               ...(isMobile

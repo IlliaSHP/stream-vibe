@@ -1,14 +1,14 @@
-import { useState, useEffect } from 'react'
+import {useState, useEffect, useCallback} from 'react'
 import { bodyLockToggle } from '@/shared/utils/bodyLock'
 
 
 export function useMenuOpen() {
   const [isOpen, setIsOpen] = useState(false)
 
-  const toggle = () => {
+  const toggle = useCallback(() => {
     setIsOpen(prev => !prev)
     bodyLockToggle()
-  }
+  }, [])
 
   useEffect(() => {
     document.documentElement.toggleAttribute('data-fls-menu-open', isOpen)

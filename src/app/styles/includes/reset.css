@@ -300,3 +300,33 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+
+:focus-visible {
+  outline: 2px dashed var(--color-white);
+  outline-offset: 4px;
+  transition-duration: 0s !important;
+}
+/* Прибираємо стандартний outline скрізь */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled,
+button[aria-disabled="true"],
+a[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Прибирає затримку 300ms на тач-пристроях.
+   Браузер за замовчуванням чекає 300ms щоб зрозуміти
+   чи буде подвійний тап (zoom). manipulation каже:
+   "zoom не потрібен — реагуй на тап миттєво" */
+a, button, [role="button"] {
+  touch-action: manipulation;
+}

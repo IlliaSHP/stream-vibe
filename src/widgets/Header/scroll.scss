@@ -1,7 +1,33 @@
-:global(.--header-scroll) {
+// Звичайний .scss
+
+//* showOnScrollUp: true,
+/*.--header-scroll {
   transition: translate 0.3s;
   translate: 0px -100%;
 }
-:global(.--header-show) {
+.--header-show {
   translate: 0 0;
+}*/
+
+
+//*showOnScrollUp: false,
+header .container {
+  transition: padding 0.3s;
 }
+.--header-scroll {
+  & .container {
+    padding-block: 14px;
+  }
+}
+
+
+
+// Використовувати в .module.scss
+
+//:global(.--header-scroll) {
+//  transition: translate 0.3s;
+//  translate: 0px -100%;
+//}
+//:global(.--header-show) {
+//  translate: 0 0;
+//}

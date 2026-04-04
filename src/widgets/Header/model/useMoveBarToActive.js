@@ -22,6 +22,7 @@ export function useMoveBarToActive(listRef) {
       height: linkEl.offsetHeight,
     })
   }, [listRef])
+  // ref об'єкт ({ current: ... }) не змінюється між рендерами, React гарантує це. Технічно його не обов'язково вказувати в deps. Але ESLint правило exhaustive-deps вимагає вказувати всі зовнішні змінні. Залишай — це нешкідливо і код чистий.
 
   useEffect(() => {
     const raf = requestAnimationFrame(moveBarToActive)
