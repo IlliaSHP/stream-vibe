@@ -51,18 +51,19 @@ const commonRules = {
   'react/react-in-jsx-scope': 'off',
   'no-console': 'warn',
   eqeqeq: 'warn',
-  curly: 'warn',
+  'curly': ['warn', 'multi-line'], // дозволяє один рядок без дужок
   'no-else-return': 'warn',
-  'comma-dangle': [
-    'error',
-    {
-      arrays: 'always-multiline',
-      objects: 'always-multiline',
-      imports: 'always-multiline',
-      exports: 'always-multiline',
-      functions: 'never',
-    },
-  ],
+  'comma-dangle': 'off',
+  //   [
+  //   'error',
+  //   {
+  //     arrays: 'always-multiline',
+  //     objects: 'always-multiline',
+  //     imports: 'always-multiline',
+  //     exports: 'always-multiline',
+  //     functions: 'never',
+  //   },
+  // ],
   'jsx-a11y/media-has-caption': 'warn',
   'jsx-a11y/no-noninteractive-tabindex': 'warn',
 }
