@@ -4,7 +4,8 @@
     "paths": {
       "@/*": ["src/*"],
       "@styles/*": ["src/app/styles/*"],
-      "@fonts/*": ["src/app/styles/fonts/*"]
+      "@fonts/*": ["src/app/styles/fonts/*"],
+      "@assets/*": ["src/shared/assets/*"],
     }
   },
   "include": ["src"]

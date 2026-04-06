@@ -57,6 +57,7 @@ export default defineConfig(({ mode }) => {
         '@': fileURLToPath(new URL('./src', import.meta.url)),
         '@styles': fileURLToPath(new URL('./src/app/styles', import.meta.url)),
         '@fonts': fileURLToPath(new URL('./src/app/styles/fonts', import.meta.url)),
+        '@assets': fileURLToPath(new URL('./src/shared/assets', import.meta.url)),
       }
     },
 

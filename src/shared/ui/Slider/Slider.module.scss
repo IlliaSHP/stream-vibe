@@ -1,34 +1,40 @@
 .slider {
   position: relative;
-  height: 100%;
   width: 100%;
+  height: 100%;
   overflow: hidden;
 }
 
 .track {
   display: flex;
   height: 100%;
-  // transform керується через JS (translateX / translateY)
-  // prefers-reduced-motion з reset.css прибирає transition глобально —
-  // тут додаткова обробка не потрібна
+  // will-change: transform — говорить браузеру заздалегідь створити
+  // окремий GPU шар для цього елемента. Браузер не чекає першого кадру анімації
+  // щоб перемістити елемент на GPU. Використовуй тільки на елементах що
+  // реально анімуються — кожен will-change споживає відеопам'ять.
+  will-change: transform;
   transition: transform 0.4s ease-in-out;
+
+  // touch-action: pan-y — дозволяє браузеру обробляти вертикальний скрол
+  // але передає горизонтальні свайпи нашому JS обробнику.
+  // Потрібно додати коли реалізуєш drag/swipe функціонал.
+  // touch-action: pan-y;
 
   &Vertical {
     flex-direction: column;
+    // touch-action: pan-x; // для вертикального слайдера — навпаки
   }
 }
 
 .slide {
-  // flex-shrink: 0 — слайд не стискається,
-  // завжди займає 100% ширини контейнера
+  // flex-shrink: 0 — слайд не стискається, завжди 100% ширини контейнера
   flex-shrink: 0;
   width: 100%;
   height: 100%;
 }
 
-// Базові стилі кнопок — без абсолютного позиціонування.
-// Розміщення кнопок задається ситуативно через зовнішні класи
-// або в scss конкретного місця використання слайдера.
+// Базові стилі кнопок без позиціонування.
+// Позиціонування додається ситуативно через classNames.btn / classNames.btnPrev
 .btn {
   background: rgba(0, 0, 0, 0.5);
   color: #fff;
@@ -46,9 +52,8 @@
     background: rgba(0, 0, 0, 0.8);
   }
 
-  // &Prev і &Next — порожні класи-маркери.
-  // Через них можна точково застосовувати стилі ззовні:
-  // :global(.mySlider) .btnPrev { left: 12px; }
+  // Порожні класи-маркери — для зовнішньої стилізації:
+  // :global(.mySlider) .btnPrev { position: absolute; left: 12px; }
   &Prev {}
   &Next {}
 }
@@ -63,8 +68,8 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.5);
   padding: 0;
+  background: rgba(255, 255, 255, 0.5);
   transition: background 0.2s ease, transform 0.2s ease;
 
   &:hover,

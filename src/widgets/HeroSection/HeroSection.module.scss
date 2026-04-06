@@ -1,3 +1,19 @@
-.hero-section {
+:global(.hero-section) {
+  padding-block: 300px;
+}
 
+.customTrack {
+
+}
+.review {
+  &Slide{}
+  &Btn {
+    &Prev{
+
+    }
+    &Nextqwewq{
+      background-color: red;
+    }
+  }
+  &Dot {}
 }
