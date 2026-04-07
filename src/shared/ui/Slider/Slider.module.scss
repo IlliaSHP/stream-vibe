@@ -1,13 +1,22 @@
-.slider {
+.sliderRoot {
   position: relative;
   width: 100%;
-  height: 100%;
-  overflow: hidden;
+  height: 100%; // додати: щоб height: 100% на viewport мав від чого рахуватись
 }
 
-.track {
-  display: flex;
+.sliderViewport {
+  overflow: hidden;  // тільки тут — обрізає тільки слайди
+  width: 100%;
   height: 100%;
+  // .sliderViewportVertical
+  &Vertical {
+    // нічого додаткового не треба — height: 100% вже є на базовому класі
+    // цей модифікатор можна залишити для майбутніх вертикальних стилів
+  }
+}
+
+.sliderWrapper {
+  display: flex;
   // will-change: transform — говорить браузеру заздалегідь створити
   // окремий GPU шар для цього елемента. Браузер не чекає першого кадру анімації
   // щоб перемістити елемент на GPU. Використовуй тільки на елементах що
@@ -20,22 +29,18 @@
   // Потрібно додати коли реалізуєш drag/swipe функціонал.
   // touch-action: pan-y;
 
-  &Vertical {
-    flex-direction: column;
-    // touch-action: pan-x; // для вертикального слайдера — навпаки
-  }
+  list-style: none;
+  padding: 0;
+  margin: 0;
 }
 
 .slide {
-  // flex-shrink: 0 — слайд не стискається, завжди 100% ширини контейнера
   flex-shrink: 0;
   width: 100%;
   height: 100%;
 }
 
-// Базові стилі кнопок без позиціонування.
-// Позиціонування додається ситуативно через classNames.btn / classNames.btnPrev
-.btn {
+:global(.slider-btn) {
   background: rgba(0, 0, 0, 0.5);
   color: #fff;
   border-radius: 50%;
@@ -51,20 +56,19 @@
   &:focus-visible {
     background: rgba(0, 0, 0, 0.8);
   }
-
-  // Порожні класи-маркери — для зовнішньої стилізації:
-  // :global(.mySlider) .btnPrev { position: absolute; left: 12px; }
-  &Prev {}
-  &Next {}
 }
 
-.pagination {
+// Окремо, без вкладеності
+:global(.slider-btn-prev) {}
+:global(.slider-btn-next) {}
+
+:global(.slider-pagination) {
   display: flex;
   justify-content: center;
   gap: 8px;
 }
 
-.dot {
+:global(.slider-pagination-dot) {
   width: 8px;
   height: 8px;
   border-radius: 50%;
@@ -76,9 +80,8 @@
   &:focus-visible {
     background: rgba(255, 255, 255, 0.9);
   }
-
-  &Active {
-    background: #fff;
-    transform: scale(1.25);
-  }
+}
+:global(.slider-pagination-dot.dot-active) {
+  background: #fff;
+  transform: scale(1.25);
 }

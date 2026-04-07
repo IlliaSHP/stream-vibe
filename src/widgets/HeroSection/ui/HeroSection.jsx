@@ -1,12 +1,12 @@
 import styles from '../HeroSection.module.scss'
 import clsx from 'clsx'
-import Slider from '@/shared/ui/Slider'
 import img1 from '@assets/img/heroSection/1.jpg'
 import img2 from '@assets/img/heroSection/2.jpg'
 import img3 from '@assets/img/heroSection/3.jpg'
 import img4 from '@assets/img/heroSection/4.jpg'
 import img5 from '@assets/img/heroSection/5.jpg'
 import {useRef} from 'react'
+import { SliderRoot, SliderTrack, SliderPrevButton, SliderNextButton, SliderDots } from '@/shared/ui/Slider'
 
 const HeroSection = (props) => {
   const {
@@ -14,11 +14,22 @@ const HeroSection = (props) => {
   } = props
 
   const movies = [
-    {url: img1, title: 'image-1'},
-    {url: img2, title: "image-2"},
-    {url: img3, title: "image-3"},
-    {url: img4, title: "image-4"},
-    {url: img5, title: "image-5"},
+    { id: 1, url: img1, title: 'image-1' },
+    { id: 2, url: img2, title: 'image-2' },
+    { id: 3, url: img3, title: 'image-3' },
+    { id: 4, url: img4, title: 'image-4' },
+    { id: 5, url: img5, title: 'image-5' },
+    { id: 6, url: img5, title: 'image-6' },
+    { id: 7, url: img5, title: 'image-7' },
+    { id: 8, url: img5, title: 'image-8' },
+    { id: 9, url: img5, title: 'image-9' },
+    { id: 10, url: img5, title: 'image-10' },
+    { id: 11, url: img5, title: 'image-11' },
+    { id: 12, url: img5, title: 'image-12' },
+    { id: 13, url: img5, title: 'image-13' },
+    { id: 14, url: img5, title: 'image-14' },
+    { id: 15, url: img5, title: 'image-15' },
+    { id: 16, url: img5, title: 'image-16' },
   ]
 
   const sliderRef = useRef(null)
@@ -26,48 +37,20 @@ const HeroSection = (props) => {
   return (
     <section
       aria-label="Latest movies showcase"
-      aria-roledescription="carousel"
       className={clsx(className, 'hero-section')}
     >
-      <button
-        type="button"
-        aria-label="Previous slide"
-        onClick={() => sliderRef.current?.goToPrev()}
-      >
-        ‹
-      </button>
-      <button
-        type="button"
-        aria-label="Next slide"
-        onClick={() => sliderRef.current?.goToNext()}
-      >
-        ›
-      </button>
-      <div>
-        <Slider
-          ref={sliderRef}
-          direction="vertical"
-          classNames={{
-            // Змінюємо анімацію треку
-            track: styles.customTrack,
-            // Свої стилі для слайдів
-            slide: styles.reviewSlide,
-            // Абсолютне позиціонування кнопок для цього конкретного слайдера
-            btn: styles.reviewBtn,
-            btnPrev: styles.reviewBtnPrev,
-            btnNext: styles.reviewBtnNextqwewq,
-            // Кастомна пагінація
-            dot: styles.reviewDot,
-          }}
-          slides={movies.map(movie => (
-            <img key={movie.title} src={movie.url} alt={movie.title} />
-          ))}
-          label="Featured movies"
+
+      {/* Кнопки винесені за межі SliderRoot */}
+      <button onClick={() => sliderRef.current?.goToPrev()}>‹</button>
+      <button onClick={() => sliderRef.current?.goToNext()}>›</button>
+
+      <SliderRoot ref={sliderRef} direction="vertical" slidesPerView={1} label="Hero">
+        <SliderTrack
+          slides={movies.map(m => <img key={m.id} src={m.url} alt={m.title} />)}
           slideLabels={movies.map(m => m.title)}
-        >
-          <p>hello</p>
-        </Slider>
-      </div>
+        />
+        <SliderDots />
+      </SliderRoot>
     </section>
   )
 }

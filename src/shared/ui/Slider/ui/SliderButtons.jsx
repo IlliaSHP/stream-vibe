@@ -1,6 +1,6 @@
 import clsx from 'clsx'
 import { useSlider } from './SliderContext'
-import styles from './Slider.module.scss'
+import styles from '../Slider.module.scss'
 
 /**
  * SliderPrevButton — кнопка "попередній слайд".
@@ -18,7 +18,7 @@ export const SliderPrevButton = ({ className, children = '‹' }) => {
   return (
     <button
       type="button"
-      className={clsx(styles.btn, styles.btnPrev, className)}
+      className={clsx('slider-btn', 'slider-btn-prev', className)}
       onClick={goToPrev}
       aria-label="Previous slide"
       disabled={!loop && currentIndex === 0}
@@ -40,7 +40,7 @@ export const SliderNextButton = ({ className, children = '›' }) => {
   return (
     <button
       type="button"
-      className={clsx(styles.btn, styles.btnNext, className)}
+      className={clsx('slider-btn', 'slider-btn-next', className)}
       onClick={goToNext}
       aria-label="Next slide"
       disabled={!loop && currentIndex === slidesCount - 1}

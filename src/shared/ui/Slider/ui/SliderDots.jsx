@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
 import clsx from 'clsx'
 import { useSlider } from './SliderContext'
-import styles from './Slider.module.scss'
+import styles from '../Slider.module.scss'
 
 /**
  * SliderDots — пагінація слайдера.
@@ -14,47 +14,33 @@ import styles from './Slider.module.scss'
 const SliderDots = ({ slideLabels = [], className, dotClassName }) => {
   const { currentIndex, slidesCount, goToSlide, label } = useSlider()
 
-  const handleClick = useCallback(e => {
-    const dot = e.target.closest('[data-dot-index]')
-    if (!dot) {
-      return
-    }
-    goToSlide(Number(dot.dataset.dotIndex))
-  }, [goToSlide])
-
-  const handleKeyDown = useCallback(e => {
-    if (e.key !== 'Enter' && e.key !== ' ') {
-      return
-    }
-    const dot = e.target.closest('[data-dot-index]')
-    if (!dot) {
-      return
-    }
-    e.preventDefault()
-    goToSlide(Number(dot.dataset.dotIndex))
-  }, [goToSlide])
-
   return (
     <div
-      role="tablist"
       aria-label={`${label} pagination`}
-      className={clsx(styles.pagination, className)}
-      onClick={handleClick}
-      onKeyDown={handleKeyDown}
+      className={clsx('slider-pagination', className)}
     >
+      {/* length в map це вбудована поведінка методу.
+      Він спеціально шукає length і створює стільки елементів.*/}
       {Array.from({ length: slidesCount }).map((_, index) => (
         <button
           key={index}
           type="button"
-          role="tab"
-          aria-selected={index === currentIndex}
+          aria-pressed={index === currentIndex}
           aria-label={slideLabels[index] ?? `Slide ${index + 1}`}
-          data-dot-index={index}
+          // React делегує всі події на рівень #root — тобто в реальному DOM
+          // це не 50 окремих addEventListener, а один обробник на корені додатку.
+          // Тому onClick на кожній кнопці не створює накладних витрат порівняно
+          // з delegation на контейнері — різниця є тільки у внутрішній таблиці React,
+          // і для 50 статичних елементів вона практично нульова.
+          // Перевага цього підходу: простіший код, немає closest/dataset,
+          // немає ESLint warnings на non-interactive div.
+          onClick={() => goToSlide(index)}
           className={clsx(
-            styles.dot,
+            'slider-pagination-dot',
             dotClassName,
             index === currentIndex && 'dot-active',
-            { [styles.dotActive]: index === currentIndex },
+            // { [styles.dotActive]: index === currentIndex },
+            { 'slider-pagination-dot-active': index === currentIndex },
           )}
         />
       ))}
