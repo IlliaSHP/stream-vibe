@@ -17,19 +17,19 @@ const HeroSection = (props) => {
     { id: 1, url: img1, title: 'image-1' },
     { id: 2, url: img2, title: 'image-2' },
     { id: 3, url: img3, title: 'image-3' },
-    { id: 4, url: img4, title: 'image-4' },
-    { id: 5, url: img5, title: 'image-5' },
-    { id: 6, url: img5, title: 'image-6' },
-    { id: 7, url: img5, title: 'image-7' },
-    { id: 8, url: img5, title: 'image-8' },
-    { id: 9, url: img5, title: 'image-9' },
-    { id: 10, url: img5, title: 'image-10' },
-    { id: 11, url: img5, title: 'image-11' },
-    { id: 12, url: img5, title: 'image-12' },
-    { id: 13, url: img5, title: 'image-13' },
-    { id: 14, url: img5, title: 'image-14' },
-    { id: 15, url: img5, title: 'image-15' },
-    { id: 16, url: img5, title: 'image-16' },
+    // { id: 4, url: img4, title: 'image-4' },
+    // { id: 5, url: img5, title: 'image-5' },
+    // { id: 6, url: img5, title: 'image-6' },
+    // { id: 7, url: img5, title: 'image-7' },
+    // { id: 8, url: img5, title: 'image-8' },
+    // { id: 9, url: img5, title: 'image-9' },
+    // { id: 10, url: img5, title: 'image-10' },
+    // { id: 11, url: img5, title: 'image-11' },
+    // { id: 12, url: img5, title: 'image-12' },
+    // { id: 13, url: img5, title: 'image-13' },
+    // { id: 14, url: img5, title: 'image-14' },
+    // { id: 15, url: img5, title: 'image-15' },
+    // { id: 16, url: img5, title: 'image-16' },
   ]
 
   const sliderRef = useRef(null)
@@ -44,7 +44,7 @@ const HeroSection = (props) => {
       <button onClick={() => sliderRef.current?.goToPrev()}>‹</button>
       <button onClick={() => sliderRef.current?.goToNext()}>›</button>
 
-      <SliderRoot ref={sliderRef} direction="vertical" slidesPerView={1} label="Hero">
+      <SliderRoot ref={sliderRef} direction="vertical" loop={false} slidesPerView={1} label="Hero">
         <SliderTrack
           slides={movies.map(m => <img key={m.id} src={m.url} alt={m.title} />)}
           slideLabels={movies.map(m => m.title)}

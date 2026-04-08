@@ -32,7 +32,6 @@ const SliderRoot = forwardRef(({
    className,
  }, ref) => {
   const [currentIndex, setCurrentIndex] = useState(0)
-
   const [slidesCount, setSlidesCount] = useState(0)
   const timerRef = useRef(null)
 
@@ -41,6 +40,8 @@ const SliderRoot = forwardRef(({
       ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
       : false
 
+
+  // Для loop=false — обмежуємо межами масиву
   const goToNext = useCallback(() => {
     setCurrentIndex(prev => {
       const isLast = prev === slidesCount - 1
@@ -61,25 +62,31 @@ const SliderRoot = forwardRef(({
     })
   }, [loop, slidesCount])
 
+  // Для loop=true — дозволяємо виходити за межі,
+  // SliderTrack телепортує після завершення анімації
+  const loopGoToNext = useCallback(() => {
+    setCurrentIndex(prev => prev + 1)
+  }, [])
+
+  const loopGoToPrev = useCallback(() => {
+    setCurrentIndex(prev => prev - 1)
+  }, [])
+
   const goToSlide = useCallback(index => {
     setCurrentIndex(index)
   }, [])
 
-  // Дозволяє SliderTrack повідомити скільки слайдів він отримав.
-  // registerSlides — публічний метод для SliderTrack щоб повідомити
-  // скільки слайдів він отримав. Виглядає як обгортка над setSlidesCount,
-  // але це свідоме рішення:
-  //
-  // 1. Інкапсуляція: setSlidesCount — внутрішній setter React стану,
-  //    він не повинен виходити назовні через контекст. registerSlides
-  //    описує намір ("зареєструй кількість"), а не деталь реалізації.
-  //
-  // 2. Розширюваність: якщо в майбутньому при зміні кількості слайдів
-  //    потрібно скинути поточний індекс або виконати іншу логіку —
-  //    змінюємо тільки registerSlides, SliderTrack не чіпаємо.
+
+
   const registerSlides = useCallback(count => {
     setSlidesCount(count)
   }, [])
+
+  // Публічні методи — те що виходить назовні через ref і контекст
+  const publicGoToNext = loop ? loopGoToNext : goToNext
+  const publicGoToPrev = loop ? loopGoToPrev : goToPrev
+
+
 
   // useImperativeHandle контролює що саме потрапляє в ref.current
   // коли батьківський компонент робить: const sliderRef = useRef()
@@ -97,18 +104,18 @@ const SliderRoot = forwardRef(({
   // Другий аргумент () => ({...}) — фабрика що повертає публічний API
   // Третій аргумент — залежності як в useCallback, оновлює API при їх зміні
   useImperativeHandle(ref, () => ({
-    goToNext,
-    goToPrev,
+    goToNext: publicGoToNext,
+    goToPrev: publicGoToPrev,
     goToSlide,
-  }), [goToNext, goToPrev, goToSlide])
+  }), [publicGoToNext, publicGoToPrev, goToSlide])
 
   useEffect(() => {
-    if (!autoplay || prefersReducedMotion) {
-      return
-    }
-    timerRef.current = setInterval(goToNext, autoplayDelay)
+    if (!autoplay || prefersReducedMotion) return
+
+    timerRef.current = setInterval(publicGoToNext, autoplayDelay)
     return () => clearInterval(timerRef.current)
-  }, [autoplay, autoplayDelay, goToNext, prefersReducedMotion])
+
+  }, [autoplay, autoplayDelay, publicGoToNext, prefersReducedMotion])
 
   return (
     <SliderContext.Provider value={{
@@ -117,8 +124,8 @@ const SliderRoot = forwardRef(({
       direction,
       slidesPerView,
       loop,
-      goToNext,
-      goToPrev,
+      goToNext: publicGoToNext,   // ← кнопки в контексті теж отримують правильні
+      goToPrev: publicGoToPrev,
       goToSlide,
       registerSlides,
       label,
@@ -129,8 +136,6 @@ const SliderRoot = forwardRef(({
         className={clsx(styles.sliderRoot, className)}
       >
         {children}
-        {/* children містить і SliderTrack і SliderDots */}
-        {/* SliderTrack сам відповідає за overflow: hidden через свій wrapper */}
       </div>
     </SliderContext.Provider>
   )

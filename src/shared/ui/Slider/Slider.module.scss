@@ -15,6 +15,21 @@
   }
 }
 
+.sliderViewportDraggable {
+  user-select: none;
+  // Дозволяє браузеру вертикальний скрол — горизонтальний drag йде в JS
+  // Для вертикального слайдера зміни на pan-x
+  touch-action: pan-y;
+}
+
+.sliderViewportDragging {
+  cursor: grabbing;
+}
+
+.sliderWrapperNoTransition {
+  transition: none;
+}
+
 .sliderWrapper {
   display: flex;
   // will-change: transform — говорить браузеру заздалегідь створити
@@ -32,6 +47,11 @@
   list-style: none;
   padding: 0;
   margin: 0;
+}
+
+.sliderWrapperDragging {
+  transition: none;
+  cursor: grabbing;
 }
 
 .slide {

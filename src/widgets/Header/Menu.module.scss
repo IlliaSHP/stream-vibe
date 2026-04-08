@@ -162,7 +162,7 @@
   &Wrap {
     position: absolute;
     inset: 0;
-    overflow: hidden;
+    // overflow: hidden;
     pointer-events: none;
     border-radius: var(--border-radius-3); // такий самий як у ul
   }
