@@ -44,7 +44,7 @@ const HeroSection = (props) => {
       <button onClick={() => sliderRef.current?.goToPrev()}>‹</button>
       <button onClick={() => sliderRef.current?.goToNext()}>›</button>
 
-      <SliderRoot ref={sliderRef} direction="vertical" loop={false} slidesPerView={1} label="Hero">
+      <SliderRoot ref={sliderRef} direction="vertical" loop={true} slidesPerView={1} label="Hero">
         <SliderTrack
           slides={movies.map(m => <img key={m.id} src={m.url} alt={m.title} />)}
           slideLabels={movies.map(m => m.title)}

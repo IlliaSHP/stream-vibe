@@ -1,67 +1,72 @@
 .sliderRoot {
   position: relative;
   width: 100%;
-  height: 100%; // додати: щоб height: 100% на viewport мав від чого рахуватись
+  height: 100%;
 }
 
+// overflow: hidden тут — обрізає слайди що виходять за межі.
+// height: 100% — успадковується від .sliderRoot.
 .sliderViewport {
-  overflow: hidden;  // тільки тут — обрізає тільки слайди
+  --slider-gap: adapt(10, 8);
+  overflow: hidden;
   width: 100%;
   height: 100%;
-  // .sliderViewportVertical
+
   &Vertical {
-    // нічого додаткового не треба — height: 100% вже є на базовому класі
-    // цей модифікатор можна залишити для майбутніх вертикальних стилів
+    // Модифікатор для майбутніх вертикальних стилів.
+    // Поки height: 100% вже є на базовому класі.
   }
 }
 
 .sliderViewportDraggable {
   user-select: none;
-  // Дозволяє браузеру вертикальний скрол — горизонтальний drag йде в JS
-  // Для вертикального слайдера зміни на pan-x
-  touch-action: pan-y;
+  // touch-action НЕ ставимо тут — він залежить від direction (horizontal/vertical)
+  // і виставляється через inline style в SliderTrack:
+  //   isVertical ? 'pan-x' : 'pan-y'
+  // Inline style завжди виграє над CSS класом — дублювання тут було б мертвим кодом.
 }
 
 .sliderViewportDragging {
   cursor: grabbing;
 }
 
-.sliderWrapperNoTransition {
-  transition: none;
-}
-
+// will-change: transform — говорить браузеру заздалегідь перенести елемент на
+// GPU шар. Не ставити на всіх підряд — кожен will-change споживає VRAM.
+// Тут виправдано: wrapper анімується постійно (swipe, autoplay).
 .sliderWrapper {
   display: flex;
-  // will-change: transform — говорить браузеру заздалегідь створити
-  // окремий GPU шар для цього елемента. Браузер не чекає першого кадру анімації
-  // щоб перемістити елемент на GPU. Використовуй тільки на елементах що
-  // реально анімуються — кожен will-change споживає відеопам'ять.
   will-change: transform;
   transition: transform 0.4s ease-in-out;
-
-  // touch-action: pan-y — дозволяє браузеру обробляти вертикальний скрол
-  // але передає горизонтальні свайпи нашому JS обробнику.
-  // Потрібно додати коли реалізуєш drag/swipe функціонал.
-  // touch-action: pan-y;
-
   list-style: none;
   padding: 0;
   margin: 0;
 }
 
 .sliderWrapperDragging {
+  // transition: none — вимикаємо CSS анімацію під час drag.
+  // Позиція слідкує за пальцем через dragOffset в inline style —
+  // CSS transition тут тільки заважав би (додавав затримку).
   transition: none;
   cursor: grabbing;
 }
 
+// flex-shrink: 0 — слайд не стискається, навіть якщо wrapper менший.
+// width/height виставляються через inline style в SliderTrack (залежать від slidesPerView).
 .slide {
   flex-shrink: 0;
+  // width: 100% тут є запасний варіант для випадку коли step ще не виміряний.
+  // Після першого measure() inline style перекриє це значення.
   width: 100%;
   height: 100%;
 }
 
+// ─── Глобальні класи (API для споживачів) ────────────────────────────────────
+// :global() — ці класи доступні ззовні без CSS Modules хешу.
+// Споживач може написати .my-slider .slider-btn { ... } у своєму SCSS.
+// Це навмисний API: дозволяємо кастомізацію без !important.
+
 :global(.slider-btn) {
-  background: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.5);
   color: #fff;
   border-radius: 50%;
   width: 40px;
@@ -71,14 +76,21 @@
   align-items: center;
   justify-content: center;
   transition: background 0.2s ease;
+  cursor: pointer;
 
   &:hover,
   &:focus-visible {
     background: rgba(0, 0, 0, 0.8);
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
   }
 }
 
-// Окремо, без вкладеності
 :global(.slider-btn-prev) {}
 :global(.slider-btn-next) {}
 
@@ -93,15 +105,21 @@
   height: 8px;
   border-radius: 50%;
   padding: 0;
+  cursor: pointer;
   background: rgba(255, 255, 255, 0.5);
   transition: background 0.2s ease, transform 0.2s ease;
 
   &:hover,
   &:focus-visible {
     background: rgba(255, 255, 255, 0.9);
+    outline: 2px solid #fff;
+    outline-offset: 2px;
   }
 }
-:global(.slider-pagination-dot.dot-active) {
+
+// Окремий селектор (не вкладений) — щоб уникнути проблем зі специфічністю
+// при накладанні кастомних класів споживача.
+:global(.slider-pagination-dot.slider-pagination-dot-active) {
   background: #fff;
   transform: scale(1.25);
 }
