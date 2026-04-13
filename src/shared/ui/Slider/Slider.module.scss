@@ -7,7 +7,6 @@
 // overflow: hidden тут — обрізає слайди що виходять за межі.
 // height: 100% — успадковується від .sliderRoot.
 .sliderViewport {
-  --slider-gap: adapt(10, 8);
   overflow: hidden;
   width: 100%;
   height: 100%;
@@ -34,6 +33,7 @@
 // GPU шар. Не ставити на всіх підряд — кожен will-change споживає VRAM.
 // Тут виправдано: wrapper анімується постійно (swipe, autoplay).
 .sliderWrapper {
+  gap: adapt(10, 8);
   display: flex;
   will-change: transform;
   transition: transform 0.4s ease-in-out;
