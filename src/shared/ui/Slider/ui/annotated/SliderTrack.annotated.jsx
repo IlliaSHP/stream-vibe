@@ -308,7 +308,7 @@
 //! Розкоментувати при перегляді.
 //! Закоментував бо IDE кидає попередження про дублювання коду
 
-
+/*
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import clsx from 'clsx'

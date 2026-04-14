@@ -1,16 +1,20 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import clsx from 'clsx'
 import { useSlider } from './SliderContext'
 import styles from '../Slider.module.scss'
-import {flushSync} from 'react-dom'
+import { useSliderMetrics } from '@/shared/ui/Slider/model/useSliderMetrics'
+import { useSliderLoop }    from '@/shared/ui/Slider/model/useSliderLoop'
+import { useSliderDrag }    from '@/shared/ui/Slider/model/useSliderDrag'
+import { normalizeIndex } from '../lib/normalizeIndex'
 
-const SliderTrack = ({ slides, slideLabels = [], className, slideClassName }) => {
+const SliderTrack = ({ slides, slideLabels = [], classNames = {}, }) => {
   const {
     currentIndex,
     realActiveIndex,
     direction,
     registerSlides,
     slidesPerView,
+    centeredSlides,
     loop,
     goToNext,
     goToPrev,
@@ -19,227 +23,159 @@ const SliderTrack = ({ slides, slideLabels = [], className, slideClassName }) =>
 
   const viewportRef = useRef(null)
   const wrapperRef  = useRef(null)
-
-  const slideSizeRef = useRef(0)
-  const gapRef= useRef(0)
-  const stepRef= useRef(0)
-
-  const [metrics, setMetrics] = useState({ slideSize: 0, gap: 0, step: 0 })
-
   const currentIndexRef = useRef(currentIndex)
   useEffect(() => { currentIndexRef.current = currentIndex }, [currentIndex])
 
   const animStateRef = useRef('idle') // 'idle' | 'sliding' | 'snapback'
-
-  const isDragging = useRef(false)
-  const startPos= useRef(0)
-  const [dragOffset, setDragOffset] = useState(0)
-  const [isDraggingState, setIsDraggingState] = useState(false)
-
   const isVertical = direction === 'vertical'
   const N = slides.length
+  const needsPixelMode = slidesPerView === 'auto' || centeredSlides
 
   useEffect(() => {
-    registerSlides(slides.length)
-  }, [slides.length, registerSlides])
+    registerSlides(N)
+  }, [N, registerSlides])
 
-  useEffect(() => {
-    if (!viewportRef.current) return
+  // ── Metrics ────────────────────────────────────────────────────────────
+  const {
+    metrics,
+    isAutoMode,
+    slideSizesRef,
+    slidePositionsRef,
+    slideSizeRef,
+    stepRef,
+  } = useSliderMetrics({
+    viewportRef,
+    wrapperRef,
+    slidesCount: N,
+    slidesPerView,
+    isVertical,
+    needsPixelMode,
+  })
 
-    const measure = () => {
-      const el = viewportRef.current
-      if (!el) return
+  // ── DOM helpers — визначаємо тут, передаємо в хуки ────────────────────
+  // Ці функції маніпулюють DOM напряму (обходять React) — це свідомо,
+  // тільки для синхронних операцій під час анімації і drag.
+  const disableTransition = useCallback(() => {
+    if (wrapperRef.current) wrapperRef.current.style.transition = 'none'
+  }, [])
 
-      // Читаємо реальний обчислений gap з wrapper
-      let parsedGap = 0
-      if (wrapperRef.current) {
-        // getComputedStyle викликається тільки при resize, в іншому випадку
-        // це не навантажує браузер, тобто у звичайного користувача все буде добре.
-        const cs = getComputedStyle(wrapperRef.current)
-        parsedGap = parseFloat(isVertical ? cs.rowGap : cs.columnGap) || 0
-      }
-      gapRef.current = parsedGap
+  const enableTransition = useCallback(() => {
+    if (wrapperRef.current) wrapperRef.current.style.transition = ''
+  }, [])
 
-      let size
-      if (slidesPerView === 'auto') {
-        const firstSlide = el.querySelector('.' + styles.slide)
-        if (!firstSlide) return
-        size = isVertical ? firstSlide.offsetHeight : firstSlide.offsetWidth
-      } else {
-        const containerSize = isVertical
-          ? el.clientHeight
-          - parseFloat(getComputedStyle(el).paddingTop)
-          - parseFloat(getComputedStyle(el).paddingBottom)
-          : el.clientWidth
-          - parseFloat(getComputedStyle(el).paddingLeft)
-          - parseFloat(getComputedStyle(el).paddingRight)
-
-        console.log('[SliderTrack measure]', {
-          parsedGap,
-          containerSize,
-          slidesPerView,
-          isVertical,
-        })
-
-        size = (containerSize - parsedGap * (slidesPerView - 1)) / slidesPerView
-      }
-
-      const newStep = size + parsedGap
-      slideSizeRef.current = size
-      gapRef.current = parsedGap
-      stepRef.current = newStep
-
-      setMetrics({ slideSize: size, gap: parsedGap, step: newStep })
-    }
-
-    measure()
-    const ro = new ResizeObserver(measure)
-    ro.observe(viewportRef.current)
-    return () => ro.disconnect()
-  }, [isVertical, slidesPerView])
-
-  const getSlideOffset = useCallback((slideIndex, currentStep, currentIdx) => {
-    if (!loop || N === 0 || currentStep === 0) return 0
-    const k = Math.round((currentIdx - slideIndex) / N)
-    return k * N * currentStep
-  }, [loop, N])
-
-  const getComputedTranslate = () => {
-    if (!wrapperRef.current) return 0
-    const matrix = new DOMMatrix(window.getComputedStyle(wrapperRef.current).transform)
-    return isVertical ? matrix.m42 : matrix.m41
-  }
-
-  const setDOMTranslate = (px) => {
+  const setDOMTranslate = useCallback((px) => {
     if (!wrapperRef.current) return
     wrapperRef.current.style.transform = isVertical
       ? `translate3d(0, ${px}px, 0)`
       : `translate3d(${px}px, 0, 0)`
-  }
+  }, [isVertical])
 
-  const disableTransition = () => {
-    if (wrapperRef.current) wrapperRef.current.style.transition = 'none'
-  }
+  const getComputedTranslate = useCallback(() => {
+    if (!wrapperRef.current) return 0
+    const matrix = new DOMMatrix(window.getComputedStyle(wrapperRef.current).transform)
+    return isVertical ? matrix.m42 : matrix.m41
+  }, [isVertical])
 
-  const enableTransition = () => {
-    if (wrapperRef.current) wrapperRef.current.style.transition = ''
-  }
+  // ─── Translate helpers ────────────────────────────────────────────────────
+  // Централізуємо логіку розрахунку translate щоб не дублювати в render і в handleTransitionEnd.
 
-  const handleTransitionEnd = (e) => {
-    if (e.propertyName !== 'transform') return
-    animStateRef.current = 'idle'
-    if (!loop) return
-
-    const idx = currentIndexRef.current
-    const normalized = ((idx % N) + N) % N
-
-    console.log('[transitionEnd]', { idx, normalized, isSame: idx === normalized })
-
-    if (idx === normalized) return // вже нормалізований — нічого робити
-
-    // 1. Синхронно оновлюємо ref — getSlideOffset одразу бачить нове значення
-    currentIndexRef.current = normalized
-
-    // 2-3. Телепортуємо wrapper без анімації
-    disableTransition()
-    // stepRef.current — актуальний розмір (не closure з рендеру)
-    const targetTranslate = -normalized * stepRef.current
-    console.log('[teleport]', { from: idx, to: normalized, targetTranslate })
-    setDOMTranslate(targetTranslate)
-
-    // Фікс кадру між ре-рендерами (мерехтіння)
-    flushSync(() => goToSlide(normalized))
-
-    // 5. Відновлюємо анімацію після двох rAF (гарантує що browser commit відбувся)
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        console.log('[enableTransition] transform зараз:', wrapperRef.current?.style.transform)
-        enableTransition()
-      })
-    })
-  }
-
-  // ─── Pointer events ───────────────────────────────────────────────────────
-  const getEventPos = (e) => isVertical ? e.clientY : e.clientX
-
-  const handlePointerDown = (e) => {
-    if (animStateRef.current !== 'idle') {
-      // Перехоплюємо поточну CSS-позицію і миттєво зупиняємо анімацію
-      const liveTranslate = getComputedTranslate()
-      disableTransition()
-      setDOMTranslate(liveTranslate)
-      animStateRef.current = 'idle'
+  // Для рендеру — читає з metrics (state, стабільне між рендерами)
+  const getTranslateForRender = useCallback((idx) => {
+    if (isAutoMode) {
+      const normalizedIdx = normalizeIndex(idx, N)
+      return -(metrics.slidePositions[normalizedIdx] ?? 0)
     }
+    return -idx * metrics.step
+  }, [isAutoMode, N, metrics])
 
-    isDragging.current = true
-    startPos.current = getEventPos(e)
-    setIsDraggingState(true)
-    // Захоплюємо pointer — всі наступні події приходять сюди
-    // навіть якщо курсор вийшов за межі елемента
-    e.currentTarget.setPointerCapture(e.pointerId)
-  }
-
-  const handlePointerMove = (e) => {
-    if (!isDragging.current) return
-    let offset = getEventPos(e) - startPos.current
-
-    if (!loop) {
-      const isAtStart = currentIndexRef.current === 0
-      const isAtEnd   = currentIndexRef.current === N - 1
-      if ((isAtStart && offset > 0) || (isAtEnd && offset < 0)) {
-        offset = Math.sign(offset) * Math.pow(Math.abs(offset), 0.35) * 10
-      }
+  // Для handlers/effects — читає з refs (актуальне значення одразу)
+  const getTranslateForIndex = useCallback((idx) => {
+    if (isAutoMode) {
+      const i = normalizeIndex(idx, N)
+      return -(slidePositionsRef.current[i] ?? 0)
     }
+    return -idx * stepRef.current
+  }, [isAutoMode, N, slidePositionsRef, stepRef])
 
-    setDragOffset(offset)
-  }
-
-  const handlePointerUp = (e) => {
-    if (!isDragging.current) return
-    isDragging.current = false
-
-    const delta= getEventPos(e) - startPos.current
-    const threshold = slideSizeRef.current * 0.3
-
-    enableTransition()
-
-    const action =
-      delta < -threshold ? goToNext :
-        delta >  threshold ? goToPrev : null
-
-    if (action) {
-      animStateRef.current = 'sliding'
-      action()
-    } else {
-      animStateRef.current = 'snapback' // йде анімація повернення на місце (користувач відпустив не дотягнувши)
+  // Поточний розмір активного слайду — для drag threshold
+  const getCurrentSlideSize = useCallback(() => {
+    if (isAutoMode) {
+      const i = normalizeIndex(currentIndexRef.current, N)
+      return slideSizesRef.current[i] ?? 0
     }
+    return slideSizeRef.current
+  }, [isAutoMode, N, slideSizesRef, slideSizeRef])
 
-    setIsDraggingState(false)
-    setDragOffset(0)
-  }
+  // ── Loop teleport ──────────────────────────────────────────────────────
+  const { handleTransitionEnd } = useSliderLoop({
+    wrapperRef,
+    loop,
+    N,
+    isVertical,
+    normalizeIndex,
+    goToSlide,
+    getTranslateForIndex,
+    currentIndexRef,
+    animStateRef,
+  })
 
-  const { slideSize, gap, step } = metrics
-  const isReady= step > 0
-  const baseTranslate= isReady ? -currentIndex * step : 0
-  const wrapperSize = N * slideSize + Math.max(0, N - 1) * gap
+  // ── Drag ───────────────────────────────────────────────────────────────
+  const { dragOffset, isDraggingState, handlers } = useSliderDrag({
+    isVertical,
+    loop,
+    N,
+    animStateRef,
+    currentIndexRef,
+    goToNext,
+    goToPrev,
+    getCurrentSlideSize,
+    getComputedTranslate,
+    setDOMTranslate,
+    disableTransition,
+    enableTransition,
+  })
+
+  // ── Slide offset (loop teleport per-slide) ─────────────────────────────
+  //
+  // В режимі loop слайди "телепортуються" на інший кінець щоб ілюзія
+  // нескінченної стрічки працювала. Offset — скільки пікселів додати
+  // до transform слайду щоб він опинився в правильному місці.
+  //
+  // k = кількість повних циклів між поточним індексом і слайдом.
+  // При числовому режимі: offset = k * N * step (всі слайди рівні)
+  // При субпіксельному:   offset = k * (virtualSize + gap) (повна довжина циклу)
+  const getSlideOffset = useCallback((slideIndex, currentIdx, virtualSize, gap, step) => {
+    if (!loop || N === 0) return 0
+    const effectiveStep = isAutoMode ? (virtualSize + gap) : (N * step)
+    if (effectiveStep === 0) return 0
+
+    // virtualSize + gap = відстань між початком циклу і початком наступного
+    const k = Math.round((currentIdx - slideIndex) / N)
+    if (k === 0) return 0
+    return k * effectiveStep
+  }, [loop, N, isAutoMode])
+
+  // ─── Render values ────────────────────────────────────────────────────────
+  const { slideSize, gap, step, slidePositions, virtualSize } = metrics
+
+  const isReady = isAutoMode
+    ? slidePositions.length > 0
+    : step > 0
+
+  const baseTranslate = isReady ? getTranslateForRender(currentIndex) : 0
+  // wrapperSize: при 'auto' — точний virtualSize, при числовому — формула
+  const wrapperSize = isAutoMode
+    ? virtualSize
+    : N * slideSize + Math.max(0, N - 1) * gap
 
   const wrapperStyle = isReady
     ? isVertical
-      ? {
-        flexDirection: 'column',
-        height: `${wrapperSize}px`,
-        transform: `translate3d(0, ${baseTranslate + dragOffset}px, 0)`,
-      }
-      : {
-        transform: `translate3d(${baseTranslate + dragOffset}px, 0, 0)`,
-      }
+      ? { flexDirection: 'column', height: `${wrapperSize}px`, transform: `translate3d(0, ${baseTranslate + dragOffset}px, 0)` }
+      : { transform: `translate3d(${baseTranslate + dragOffset}px, 0, 0)` }
     : isVertical
       ? { flexDirection: 'column' }
       : {}
 
-  const slideStyle = isReady
-    ? { [isVertical ? 'height' : 'width']: `${slideSize}px`, flexShrink: 0 }
-    : { flexShrink: 0 }
 
   console.log('[SliderTrack render]', { currentIndex, step, baseTranslate, isReady });
 
@@ -251,20 +187,21 @@ const SliderTrack = ({ slides, slideLabels = [], className, slideClassName }) =>
         isVertical && styles.sliderViewportVertical,
         styles.sliderViewportDraggable,
         isDraggingState && styles.sliderViewportDragging,
+        classNames.viewport,
       )}
       style={{ touchAction: isVertical ? 'pan-x' : 'pan-y' }}
       onDragStart={(e) => e.preventDefault()}
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
-      onPointerCancel={handlePointerUp}
+      onPointerDown={handlers.handlePointerDown}
+      onPointerMove={handlers.handlePointerMove}
+      onPointerUp={handlers.handlePointerUp}
+      onPointerCancel={handlers.handlePointerUp}
     >
       <ul
         ref={wrapperRef}
         className={clsx(
           styles.sliderWrapper,
           isDraggingState && styles.sliderWrapperDragging,
-          className,
+          classNames.wrapper,
         )}
         style={wrapperStyle}
         onTransitionEnd={handleTransitionEnd}
@@ -272,9 +209,10 @@ const SliderTrack = ({ slides, slideLabels = [], className, slideClassName }) =>
 
         {slides.map((slideContent, index) => {
           const isActive = index === realActiveIndex
-          const offset   = getSlideOffset(index, step, currentIndex)
+          const offset = getSlideOffset(index, currentIndex, virtualSize, gap, step)
 
           if (offset !== 0) console.log('[slide offset]', { index, offset, currentIndex })
+          console.log('[getSlideOffset call]', { index, currentIndex, virtualSize, gap, step })
 
           const slideTransform = loop && offset !== 0
             ? isVertical
@@ -282,13 +220,29 @@ const SliderTrack = ({ slides, slideLabels = [], className, slideClassName }) =>
               : `translate3d(${offset}px, 0, 0)`
             : undefined
 
+          // slideStyle: при 'auto' — не задаємо ширину примусово (CSS контролює),
+          // при числовому — виставляємо точний розмір через inline style
+          const slideStyle = isReady
+            ? isAutoMode
+              ? { flexShrink: 0, ...(slideTransform ? { transform: slideTransform } : {}) }
+              : {
+                [isVertical ? 'height' : 'width']: `${slideSize}px`,
+                flexShrink: 0,
+                ...(slideTransform ? { transform: slideTransform } : {}),
+              }
+            : { flexShrink: 0, ...(slideTransform ? { transform: slideTransform } : {}) }
+
           return (
             <li
               key={index}
               role="group"
               aria-roledescription="slide"
-              style={slideTransform ? { ...slideStyle, transform: slideTransform } : slideStyle}
-              className={clsx(styles.slide, slideClassName, isActive && 'slide-active')}
+              style={slideStyle}
+              className={clsx(
+                styles.slide,
+                classNames.slide,
+                isActive && 'slide-active'
+              )}
               aria-hidden={!isActive}
               inert={!isActive}  // блокує Tab і взаємодію для прихованих
               aria-label={slideLabels[index] ?? `${index + 1} of ${N}`}

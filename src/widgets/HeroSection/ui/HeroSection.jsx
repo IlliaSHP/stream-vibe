@@ -40,17 +40,51 @@ const HeroSection = (props) => {
       className={clsx(className, 'hero-section')}
     >
 
-      {/* Кнопки винесені за межі SliderRoot */}
-      <button onClick={() => sliderRef.current?.goToPrev()}>‹</button>
-      <button onClick={() => sliderRef.current?.goToNext()}>›</button>
 
-      <SliderRoot ref={sliderRef}  loop={true} slidesPerView={1} label="Hero">
+
+      <SliderRoot
+        ref={sliderRef}
+        loop={true}
+        slidesPerView="auto"
+        label="Hero"
+        className={styles.heroRoot} // якщо треба кастомізувати сам контейнер
+      >
         <SliderTrack
           slides={movies.map(m => <img key={m.id} src={m.url} alt={m.title} />)}
           slideLabels={movies.map(m => m.title)}
+          classNames={{
+            slide: styles.heroSlide,
+            // wrapper: styles.heroWrapper,
+            // viewport: styles.heroViewport,
+          }}
         />
-        <SliderDots />
+        <SliderDots
+          classNames={{
+            root: styles.heroDots,
+            dot: styles.heroDot,
+          }}
+        />
+        <SliderPrevButton className={styles.heroPrevBtn} />
+        <SliderNextButton className={styles.heroNextBtn} />
       </SliderRoot>
+
+
+
+      {/*/!* Кнопки винесені за межі SliderRoot *!/*/}
+      {/*<button onClick={() => sliderRef.current?.goToPrev()}>‹</button>*/}
+      {/*<button onClick={() => sliderRef.current?.goToNext()}>›</button>*/}
+
+      {/*<SliderRoot ref={sliderRef}  loop={true} slidesPerView='auto' label="Hero"*/}
+      {/*  classNames={{*/}
+      {/*    slide: styles.heroSlide, // ← клас тільки для слайдів*/}
+      {/*  }}*/}
+      {/*>*/}
+      {/*  <SliderTrack*/}
+      {/*    slides={movies.map(m => <img key={m.id} src={m.url} alt={m.title} />)}*/}
+      {/*    slideLabels={movies.map(m => m.title)}*/}
+      {/*  />*/}
+      {/*  <SliderDots />*/}
+      {/*</SliderRoot>*/}
     </section>
   )
 }

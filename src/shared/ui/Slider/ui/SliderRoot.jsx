@@ -161,6 +161,7 @@ import {
   useRef,
   useState,
 } from 'react'
+import { normalizeIndex } from '../lib/normalizeIndex'
 import clsx from 'clsx'
 import { SliderContext } from './SliderContext'
 import styles from '../Slider.module.scss'
@@ -178,6 +179,17 @@ if (typeof window !== 'undefined') {
 
 // Відповідає тільки за логіку: currentIndex, autoplay, навігація.
 // Не рендерить жодної розмітки слайдів — тільки обгортковий div і Provider.
+/**
+ * @prop {Object} classNames - Кастомні класи для частин слайдера
+ * @prop {string} classNames.root       - Кореневий контейнер (SliderRoot)
+ * @prop {string} classNames.viewport   - Viewport (overflow: hidden)
+ * @prop {string} classNames.wrapper    - Flex-контейнер слайдів
+ * @prop {string} classNames.slide      - Кожен слайд (li елемент)
+ * @prop {string} classNames.prevBtn    - Кнопка "назад"
+ * @prop {string} classNames.nextBtn    - Кнопка "вперед"
+ * @prop {string} classNames.dotsWrap   - Контейнер пагінації
+ * @prop {string} classNames.dot        - Одна точка пагінації
+ */
 const SliderRoot = forwardRef(({
    children,
    direction    = 'horizontal',
@@ -185,6 +197,7 @@ const SliderRoot = forwardRef(({
    autoplay     = false,
    autoplayDelay = 4000,
    loop         = true,
+   centeredSlides = false,
    label        = 'Slider',
    className,
  }, ref) => {
@@ -254,9 +267,7 @@ const SliderRoot = forwardRef(({
   // Dots і Buttons мають бачити [0, N-1], а не необмежено зростаючий currentIndex.
   // SliderTrack отримує сирий currentIndex бо він потрібен для getSlideOffset.
   // ─────────────────────────────────────────────────────────────────────────────
-  const realActiveIndex = slidesCount > 0
-    ? ((currentIndex % slidesCount) + slidesCount) % slidesCount
-    : 0
+  const realActiveIndex = normalizeIndex(currentIndex, slidesCount)
 
   const contextValue = useMemo(() => ({
     currentIndex,      // сирий — для SliderTrack (getSlideOffset, translate)
@@ -265,6 +276,7 @@ const SliderRoot = forwardRef(({
     direction,
     slidesPerView,
     loop,
+    centeredSlides,
     goToNext,
     goToPrev,
     goToSlide,
@@ -279,6 +291,7 @@ const SliderRoot = forwardRef(({
     direction,
     slidesPerView,
     loop,
+    centeredSlides,
     goToNext,
     goToPrev,
     goToSlide,

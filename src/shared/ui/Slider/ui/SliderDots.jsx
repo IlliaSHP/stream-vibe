@@ -1,7 +1,7 @@
 import clsx from 'clsx'
 import { useSlider } from './SliderContext'
 
-const SliderDots = ({ slideLabels = [], className, dotClassName }) => {
+const SliderDots = ({ slideLabels = [], classNames = {}, }) => {
   const { realActiveIndex, slidesCount, goToSlide, label } = useSlider()
 
   return (
@@ -11,7 +11,7 @@ const SliderDots = ({ slideLabels = [], className, dotClassName }) => {
       // що нетипово для dots і заплутує користувачів (підтверджено користувацьким тестуванням).
       role="group"
       aria-label={`${label} pagination`}
-      className={clsx('slider-pagination', className)}
+      className={clsx('slider-pagination', classNames.root)}
     >
       {/* length в map це вбудована поведінка методу.
       Він спеціально шукає length і створює стільки елементів.*/}
@@ -39,7 +39,7 @@ const SliderDots = ({ slideLabels = [], className, dotClassName }) => {
             onClick={() => goToSlide(index)}
             className={clsx(
               'slider-pagination-dot',
-              dotClassName,
+              classNames.dot,
               isActive && 'slider-pagination-dot-active',
             )}
           />
