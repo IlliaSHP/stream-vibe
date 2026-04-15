@@ -20,10 +20,12 @@
 }
 
 .hero {
-  &Root {}
-  &Slide {
-//    width: 300px;        // або vw, %, fit-content — будь-що
-//    height: 200px;
+  &Root {
+
+    & .heroSlide {
+      width: 300px;        // або vw, %, fit-content — будь-що
+      height: 200px;
+    }
   }
   &Dot{}
   &Dots{}

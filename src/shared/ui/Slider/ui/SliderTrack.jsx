@@ -41,8 +41,10 @@ const SliderTrack = ({ slides, slideLabels = [], classNames = {}, }) => {
     isAutoMode,
     slideSizesRef,
     slidePositionsRef,
+    virtualSizeRef,
     slideSizeRef,
     stepRef,
+    gapRef,
   } = useSliderMetrics({
     viewportRef,
     wrapperRef,
@@ -82,8 +84,15 @@ const SliderTrack = ({ slides, slideLabels = [], classNames = {}, }) => {
   // Для рендеру — читає з metrics (state, стабільне між рендерами)
   const getTranslateForRender = useCallback((idx) => {
     if (isAutoMode) {
+      // НЕ нормалізуємо idx — translate має накопичуватись як в числовому режимі
       const normalizedIdx = normalizeIndex(idx, N)
-      return -(metrics.slidePositions[normalizedIdx] ?? 0)
+      const basePosition  = metrics.slidePositions[normalizedIdx] ?? 0
+
+      // Кількість повних циклів — скільки разів вийшли за межі
+      const cycles     = Math.floor(idx / N) // або Math.round, залежно від логіки
+      const cycleShift = cycles * (metrics.virtualSize + metrics.gap)
+
+      return -(basePosition + cycleShift)
     }
     return -idx * metrics.step
   }, [isAutoMode, N, metrics])
@@ -91,11 +100,14 @@ const SliderTrack = ({ slides, slideLabels = [], classNames = {}, }) => {
   // Для handlers/effects — читає з refs (актуальне значення одразу)
   const getTranslateForIndex = useCallback((idx) => {
     if (isAutoMode) {
-      const i = normalizeIndex(idx, N)
-      return -(slidePositionsRef.current[i] ?? 0)
+      const i         = normalizeIndex(idx, N)
+      const basePos   = slidePositionsRef.current[i] ?? 0
+      const cycles    = Math.floor(idx / N)
+      const cycleShift = cycles * (virtualSizeRef.current + gapRef.current)
+      return -(basePos + cycleShift)
     }
     return -idx * stepRef.current
-  }, [isAutoMode, N, slidePositionsRef, stepRef])
+  }, [isAutoMode, N, slidePositionsRef, stepRef, virtualSizeRef, gapRef])
 
   // Поточний розмір активного слайду — для drag threshold
   const getCurrentSlideSize = useCallback(() => {
