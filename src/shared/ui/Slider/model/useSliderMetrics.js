@@ -11,10 +11,10 @@ export const useSliderMetrics = ({
  }) => {
   const slideSizesRef     = useRef([])
   const slidePositionsRef = useRef([])
-  const virtualSizeRef    = useRef(0)
-  const slideSizeRef      = useRef(0)
-  const stepRef           = useRef(0)
-  const gapRef            = useRef(0)
+  const virtualSizeRef= useRef(0)
+  const slideSizeRef  = useRef(0)
+  const stepRef       = useRef(0)
+  const gapRef        = useRef(0)
 
   // ─── State для ре-рендеру ─────────────────────────────────────────────────
   // isAutoMode — чи активний субпіксельний режим.
@@ -29,9 +29,9 @@ export const useSliderMetrics = ({
   // const isAutoMode = metrics.slidePositions.length > 0 && slidesPerView === 'auto'
   const [isAutoMode, setIsAutoMode] = useState(false)
 
-  useEffect(() => {
     // viewportRef і wrapperRef — стабільні об'єкти (не змінюються між рендерами).
     // Їх не потрібно в deps — ESLint помиляється тут, бо не знає що це refs.
+  useEffect(() => {
     if (!viewportRef.current) return
 
     const measure = () => {

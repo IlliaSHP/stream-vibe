@@ -1,43 +1,26 @@
 // Slider/model/useSliderLoop.js
 import { flushSync } from 'react-dom'
-import {useRef} from 'react'
+import {normalizeIndex} from '@/shared/ui/Slider/lib/normalizeIndex'
 
 export const useSliderLoop = ({
-  wrapperRef,
   loop,
   N,
-  isVertical,
-  normalizeIndex,
   goToSlide,
   getTranslateForIndex,
   currentIndexRef,
   animStateRef,
+  setAnimating,
+  setDOMTranslate,
+  disableTransition,
+  enableTransition,
 }) => {
-  const disableTransition = () => {
-    if (wrapperRef.current) wrapperRef.current.style.transition = 'none'
-  }
-
-  const enableTransition = () => {
-    if (wrapperRef.current) wrapperRef.current.style.transition = ''
-  }
-
-  const setDOMTranslate = (px) => {
-    if (!wrapperRef.current) return
-    wrapperRef.current.style.transform = isVertical
-      ? `translate3d(0, ${px}px, 0)`
-      : `translate3d(${px}px, 0, 0)`
-  }
 
   const handleTransitionEnd = (e) => {
     if (e.propertyName !== 'transform') return
 
-    console.log('[transitionEnd]', {
-      animState: animStateRef.current,
-      idx: currentIndexRef.current,
-      normalized: normalizeIndex(currentIndexRef.current, N)
-    })
     const prevState = animStateRef.current
     animStateRef.current = 'idle'
+    setAnimating(false)
 
     if (prevState !== 'sliding') return
     if (!loop || N === 0) return

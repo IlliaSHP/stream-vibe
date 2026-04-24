@@ -45,7 +45,7 @@ const HeroSection = (props) => {
       <SliderRoot
         ref={sliderRef}
         loop={true}
-        slidesPerView="auto"
+        slidesPerView={1}
         label="Hero"
         className={styles.heroRoot} // якщо треба кастомізувати сам контейнер
       >

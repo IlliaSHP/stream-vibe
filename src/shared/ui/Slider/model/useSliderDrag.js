@@ -13,6 +13,7 @@ export const useSliderDrag = ({
   setDOMTranslate,
   disableTransition,
   enableTransition,
+  setAnimating,
 }) => {
   const isDragging = useRef(false)
   const startPos   = useRef(0)
@@ -29,6 +30,7 @@ export const useSliderDrag = ({
       disableTransition()
       setDOMTranslate(liveTranslate)
       animStateRef.current = 'idle'
+      setAnimating(false)
     }
 
     isDragging.current = true
@@ -69,9 +71,11 @@ export const useSliderDrag = ({
 
     if (action) {
       animStateRef.current = 'sliding'
+      setAnimating(true)
       action()
     } else {
       animStateRef.current = 'snapback' // йде анімація повернення на місце (користувач відпустив не дотягнувши)
+      setAnimating(true)
     }
 
     setIsDraggingState(false)

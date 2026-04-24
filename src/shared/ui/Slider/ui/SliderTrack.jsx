@@ -19,12 +19,12 @@ const SliderTrack = ({ slides, slideLabels = [], classNames = {}, }) => {
     goToNext,
     goToPrev,
     goToSlide,
+    setAnimating,
   } = useSlider()
 
   const viewportRef = useRef(null)
   const wrapperRef  = useRef(null)
   const currentIndexRef = useRef(currentIndex)
-  useEffect(() => { currentIndexRef.current = currentIndex }, [currentIndex])
 
   const animStateRef = useRef('idle') // 'idle' | 'sliding' | 'snapback'
   const isVertical = direction === 'vertical'
@@ -81,32 +81,24 @@ const SliderTrack = ({ slides, slideLabels = [], classNames = {}, }) => {
   // ─── Translate helpers ────────────────────────────────────────────────────
   // Централізуємо логіку розрахунку translate щоб не дублювати в render і в handleTransitionEnd.
 
+  const calcTranslate = (idx, N, isAutoMode, positions, virtualSize, gap, step) => {
+    if (isAutoMode) {
+      const i = normalizeIndex(idx, N)
+      // Кількість повних циклів — скільки разів вийшли за межі
+      const cycles = Math.floor(idx / N)
+      return -(positions[i] ?? 0) + cycles * (virtualSize + gap)
+    }
+    return -idx * step
+  }
+
   // Для рендеру — читає з metrics (state, стабільне між рендерами)
   const getTranslateForRender = useCallback((idx) => {
-    if (isAutoMode) {
-      // НЕ нормалізуємо idx — translate має накопичуватись як в числовому режимі
-      const normalizedIdx = normalizeIndex(idx, N)
-      const basePosition  = metrics.slidePositions[normalizedIdx] ?? 0
-
-      // Кількість повних циклів — скільки разів вийшли за межі
-      const cycles     = Math.floor(idx / N) // або Math.round, залежно від логіки
-      const cycleShift = cycles * (metrics.virtualSize + metrics.gap)
-
-      return -(basePosition + cycleShift)
-    }
-    return -idx * metrics.step
+    calcTranslate(idx, N, isAutoMode, metrics.slidePositions, metrics.virtualSize, metrics.gap, metrics.step)
   }, [isAutoMode, N, metrics])
 
   // Для handlers/effects — читає з refs (актуальне значення одразу)
   const getTranslateForIndex = useCallback((idx) => {
-    if (isAutoMode) {
-      const i         = normalizeIndex(idx, N)
-      const basePos   = slidePositionsRef.current[i] ?? 0
-      const cycles    = Math.floor(idx / N)
-      const cycleShift = cycles * (virtualSizeRef.current + gapRef.current)
-      return -(basePos + cycleShift)
-    }
-    return -idx * stepRef.current
+    calcTranslate(idx, N, isAutoMode, slidePositionsRef.current, virtualSizeRef.current, gapRef.current, stepRef.current)
   }, [isAutoMode, N, slidePositionsRef, stepRef, virtualSizeRef, gapRef])
 
   // Поточний розмір активного слайду — для drag threshold
@@ -123,12 +115,14 @@ const SliderTrack = ({ slides, slideLabels = [], classNames = {}, }) => {
     wrapperRef,
     loop,
     N,
-    isVertical,
-    normalizeIndex,
     goToSlide,
     getTranslateForIndex,
     currentIndexRef,
     animStateRef,
+    setAnimating,
+    setDOMTranslate,
+    disableTransition,
+    enableTransition,
   })
 
   // ── Drag ───────────────────────────────────────────────────────────────
@@ -145,6 +139,7 @@ const SliderTrack = ({ slides, slideLabels = [], classNames = {}, }) => {
     setDOMTranslate,
     disableTransition,
     enableTransition,
+    setAnimating,
   })
 
   // ── Slide offset (loop teleport per-slide) ─────────────────────────────
@@ -161,7 +156,6 @@ const SliderTrack = ({ slides, slideLabels = [], classNames = {}, }) => {
     const effectiveStep = isAutoMode ? (virtualSize + gap) : (N * step)
     if (effectiveStep === 0) return 0
 
-    // virtualSize + gap = відстань між початком циклу і початком наступного
     const k = Math.round((currentIdx - slideIndex) / N)
     if (k === 0) return 0
     return k * effectiveStep
@@ -187,6 +181,13 @@ const SliderTrack = ({ slides, slideLabels = [], classNames = {}, }) => {
     : isVertical
       ? { flexDirection: 'column' }
       : {}
+
+  useEffect(() => {
+    currentIndexRef.current = currentIndex
+
+    if (!isReady) return
+    setAnimating(true)
+  }, [currentIndex])
 
 
   console.log('[SliderTrack render]', { currentIndex, step, baseTranslate, isReady });
