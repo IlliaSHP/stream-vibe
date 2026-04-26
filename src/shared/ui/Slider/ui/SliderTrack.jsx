@@ -3,8 +3,9 @@ import clsx from 'clsx'
 import { useSlider } from './SliderContext'
 import styles from '../Slider.module.scss'
 import { useSliderMetrics } from '@/shared/ui/Slider/model/useSliderMetrics'
-import { useSliderLoop }    from '@/shared/ui/Slider/model/useSliderLoop'
-import { useSliderDrag }    from '@/shared/ui/Slider/model/useSliderDrag'
+import { useSliderLoop } from '@/shared/ui/Slider/model/useSliderLoop'
+import { useSliderDrag } from '@/shared/ui/Slider/model/useSliderDrag'
+import { useVisualIndex } from '@/shared/ui/Slider/model/useVisualIndex'
 import { normalizeIndex } from '../lib/normalizeIndex'
 
 const SliderTrack = ({ slides, slideLabels = [], classNames = {}, }) => {
@@ -16,6 +17,7 @@ const SliderTrack = ({ slides, slideLabels = [], classNames = {}, }) => {
     slidesPerView,
     centeredSlides,
     loop,
+    transition,
     goToNext,
     goToPrev,
     goToSlide,
@@ -92,14 +94,14 @@ const SliderTrack = ({ slides, slideLabels = [], classNames = {}, }) => {
   }
 
   // Для рендеру — читає з metrics (state, стабільне між рендерами)
-  const getTranslateForRender = useCallback((idx) => {
-    calcTranslate(idx, N, isAutoMode, metrics.slidePositions, metrics.virtualSize, metrics.gap, metrics.step)
-  }, [isAutoMode, N, metrics])
+  const getTranslateForRender = useCallback((idx) =>
+      calcTranslate(idx, N, isAutoMode, metrics.slidePositions, metrics.virtualSize, metrics.gap, metrics.step),
+    [isAutoMode, N, metrics])
 
   // Для handlers/effects — читає з refs (актуальне значення одразу)
-  const getTranslateForIndex = useCallback((idx) => {
-    calcTranslate(idx, N, isAutoMode, slidePositionsRef.current, virtualSizeRef.current, gapRef.current, stepRef.current)
-  }, [isAutoMode, N, slidePositionsRef, stepRef, virtualSizeRef, gapRef])
+  const getTranslateForIndex = useCallback((idx) =>
+      calcTranslate(idx, N, isAutoMode, slidePositionsRef.current, virtualSizeRef.current, gapRef.current, stepRef.current),
+    [isAutoMode, N, slidePositionsRef, stepRef, virtualSizeRef, gapRef])
 
   // Поточний розмір активного слайду — для drag threshold
   const getCurrentSlideSize = useCallback(() => {
@@ -111,10 +113,11 @@ const SliderTrack = ({ slides, slideLabels = [], classNames = {}, }) => {
   }, [isAutoMode, N, slideSizesRef, slideSizeRef])
 
   // ── Loop teleport ──────────────────────────────────────────────────────
-  const { handleTransitionEnd } = useSliderLoop({
+  const { handleTransitionEnd, armSafetyTimer } = useSliderLoop({
     wrapperRef,
     loop,
     N,
+    duration: transition.duration,
     goToSlide,
     getTranslateForIndex,
     currentIndexRef,
@@ -169,6 +172,23 @@ const SliderTrack = ({ slides, slideLabels = [], classNames = {}, }) => {
     : step > 0
 
   const baseTranslate = isReady ? getTranslateForRender(currentIndex) : 0
+
+  const renderIndex = useVisualIndex({
+    wrapperRef,
+    isVertical,
+    isReady,
+    isAutoMode,
+    isDraggingState,
+    dragOffset,
+    baseTranslate,
+    currentIndex,
+    N,
+    slidePositionsRef,
+    virtualSizeRef,
+    gapRef,
+    stepRef,
+  })
+
   // wrapperSize: при 'auto' — точний virtualSize, при числовому — формула
   const wrapperSize = isAutoMode
     ? virtualSize
@@ -182,11 +202,22 @@ const SliderTrack = ({ slides, slideLabels = [], classNames = {}, }) => {
       ? { flexDirection: 'column' }
       : {}
 
+  // useEffect [currentIndex] — кожна навігація запускає нову анімацію.
+  // animStateRef='sliding' — ОБОВ'ЯЗКОВО, інакше performNormalization не
+  // знає, що йде click-навігація і пропускає snap.
   useEffect(() => {
     currentIndexRef.current = currentIndex
-
     if (!isReady) return
+
+    // if (transition.duration === 0) {
+      // Без анімації — нормалізуємо на наступному tick
+      // queueMicrotask(performNormalization)
+      // return
+    // }
+
+    animStateRef.current = 'sliding'
     setAnimating(true)
+    armSafetyTimer()
   }, [currentIndex])
 
 
@@ -224,9 +255,6 @@ const SliderTrack = ({ slides, slideLabels = [], classNames = {}, }) => {
           const isActive = index === realActiveIndex
           const offset = getSlideOffset(index, currentIndex, virtualSize, gap, step)
 
-          if (offset !== 0) console.log('[slide offset]', { index, offset, currentIndex })
-          console.log('[getSlideOffset call]', { index, currentIndex, virtualSize, gap, step })
-
           const slideTransform = loop && offset !== 0
             ? isVertical
               ? `translate3d(0, ${offset}px, 0)`
@@ -248,17 +276,30 @@ const SliderTrack = ({ slides, slideLabels = [], classNames = {}, }) => {
           return (
             <li
               key={index}
+              // role="group" — групує контент слайду як одне ціле для AT.
               role="group"
+              // aria-roledescription="slide" — скрінрідер скаже "slide" замість "group".
               aria-roledescription="slide"
+              // aria-label="2 of 5" — APG рекомендує саме такий формат для каруселі.
+              // Допомагає користувачу орієнтуватись в загальній кількості.
+              aria-label={slideLabels[index] ?? `${index + 1} of ${N}`}
+              // tabIndex — активний слайд у Tab-послідовності.
+              // Користувач Tab-ає → фокус на активному слайді → стрілки працюють.
+              // Неактивні tabIndex={-1} (програмно фокусуємі, але не через Tab).
+              tabIndex={isActive ? 0 : -1}
+              // inert — повністю вимикає неактивні слайди для AT і інтеракції.
+              // Це гарантує що Tab всередині прихованого слайду не "втече" в нього.
+              // inert ефективніше за aria-hidden + tabIndex=-1: він гарантовано блокує всі вкладені фокусовані елементи.
+              inert={!isActive}
+              // aria-hidden залишається як подвійна гарантія для старих AT
+              // (inert підтримується з 2023 в усіх движках, але legacy AT може не знати)
+              aria-hidden={!isActive}
               style={slideStyle}
               className={clsx(
                 styles.slide,
                 classNames.slide,
                 isActive && 'slide-active'
               )}
-              aria-hidden={!isActive}
-              inert={!isActive}  // блокує Tab і взаємодію для прихованих
-              aria-label={slideLabels[index] ?? `${index + 1} of ${N}`}
             >
               {slideContent}
             </li>

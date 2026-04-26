@@ -69,6 +69,7 @@ export const useSliderMetrics = ({
         let position    = 0
 
         slideEls.forEach((slideEl) => {
+
           const rect = slideEl.getBoundingClientRect()
           const size = isVertical ? rect.height : rect.width
           sizes.push(size)

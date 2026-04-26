@@ -36,7 +36,7 @@
   gap: adapt(10, 8);
   display: flex;
   will-change: transform;
-  transition: transform 0.4s ease-in-out;
+  transition: transform var(--slider-duration, 400ms) var(--slider-easing, ease-in-out);
   list-style: none;
   padding: 0;
   margin: 0;
@@ -58,6 +58,10 @@
   // Після першого measure() inline style перекриє це значення.
   width: 100%;
   height: 100%;
+}
+
+.sliderLiveRegion {
+
 }
 
 // ─── Глобальні класи (API для споживачів) ────────────────────────────────────

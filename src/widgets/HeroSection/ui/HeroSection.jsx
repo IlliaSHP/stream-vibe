@@ -5,8 +5,9 @@ import img2 from '@assets/img/heroSection/2.jpg'
 import img3 from '@assets/img/heroSection/3.jpg'
 import img4 from '@assets/img/heroSection/4.jpg'
 import img5 from '@assets/img/heroSection/5.jpg'
-import {useRef} from 'react'
+import {useMemo, useRef} from 'react'
 import { SliderRoot, SliderTrack, SliderPrevButton, SliderNextButton, SliderDots } from '@/shared/ui/Slider'
+import {useMediaQuery} from '@/shared/ui/Slider/lib/useMediaQuery'
 
 const HeroSection = (props) => {
   const {
@@ -33,6 +34,18 @@ const HeroSection = (props) => {
   ]
 
   const sliderRef = useRef(null)
+  // const isMobile = useMediaQuery('(max-width: 767px)')
+
+  const breakpoints = useMemo(() => ({
+    640:  { slidesPerView: 1 },
+    1024: {
+      slidesPerView: 1,
+      // direction: "vertical",
+      // autoplay: true,
+      // autoplayDelay: 1000,
+      // centeredSlides: true,
+    },
+  }), [])
 
   return (
     <section
@@ -40,6 +53,22 @@ const HeroSection = (props) => {
       className={clsx(className, 'hero-section')}
     >
 
+      {/*todo MediaQuery*/}
+      {/*<section>
+        {isMobile ? (
+          <SliderRoot>...</SliderRoot>
+        ) : (
+          <DesktopGrid>...</DesktopGrid>
+        )}
+      </section>
+      Або:
+      return isMobile ? (
+      <SliderRoot>{slides}</SliderRoot>
+      ) : (
+      <ul className={styles.staticList}>
+        {slides.map((s, i) => <li key={i}>{s}</li>)}
+      </ul>
+      )*/}
 
 
       <SliderRoot
@@ -48,6 +77,9 @@ const HeroSection = (props) => {
         slidesPerView={1}
         label="Hero"
         className={styles.heroRoot} // якщо треба кастомізувати сам контейнер
+        transition={{ duration: 1200, easing: 'cubic-bezier(0.56, 1, 0.3, 1)' }}
+        // transition={{ duration: 200 }}
+        breakpoints={breakpoints}
       >
         <SliderTrack
           slides={movies.map(m => <img key={m.id} src={m.url} alt={m.title} />)}
@@ -69,22 +101,6 @@ const HeroSection = (props) => {
       </SliderRoot>
 
 
-
-      {/*/!* Кнопки винесені за межі SliderRoot *!/*/}
-      {/*<button onClick={() => sliderRef.current?.goToPrev()}>‹</button>*/}
-      {/*<button onClick={() => sliderRef.current?.goToNext()}>›</button>*/}
-
-      {/*<SliderRoot ref={sliderRef}  loop={true} slidesPerView='auto' label="Hero"*/}
-      {/*  classNames={{*/}
-      {/*    slide: styles.heroSlide, // ← клас тільки для слайдів*/}
-      {/*  }}*/}
-      {/*>*/}
-      {/*  <SliderTrack*/}
-      {/*    slides={movies.map(m => <img key={m.id} src={m.url} alt={m.title} />)}*/}
-      {/*    slideLabels={movies.map(m => m.title)}*/}
-      {/*  />*/}
-      {/*  <SliderDots />*/}
-      {/*</SliderRoot>*/}
     </section>
   )
 }

@@ -25,6 +25,16 @@
     & .heroSlide {
       width: 300px;        // або vw, %, fit-content — будь-що
       height: 200px;
+      background-color: #6b5353;
+      &:nth-child(1) {
+        background-color: orange;
+      }
+      &:nth-child(2) {
+        background-color: hotpink;
+      }
+      &:nth-child(3) {
+        background-color: green;
+      }
     }
   }
   &Dot{}

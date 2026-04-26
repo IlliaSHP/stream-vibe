@@ -11,17 +11,10 @@ import { normalizeIndex } from '../lib/normalizeIndex'
 import clsx from 'clsx'
 import { SliderContext } from './SliderContext'
 import styles from '../Slider.module.scss'
+import { useResponsiveProps } from '@/shared/ui/Slider/model/useResponsiveProps'
+import { usePrefersReducedMotion } from '@/shared/ui/Slider/lib/usePrefersReducedMotion'
 
-// Виносимо за межі компонента: це singleton-значення, воно не залежить від
-// пропсів чи стейту — немає сенсу перераховувати при кожному рендері.
-// Слухаємо зміну через MediaQueryList.addEventListener щоб реагувати в реальному
-// часі (користувач може змінити налаштування ОС під час сесії).
-let _prefersReducedMotion = false
-if (typeof window !== 'undefined') {
-  const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
-  _prefersReducedMotion = mq.matches
-  mq.addEventListener('change', (e) => { _prefersReducedMotion = e.matches })
-}
+const DEFAULT_TRANSITION = { duration: 400, easing: 'ease-in-out' }
 
 // Відповідає тільки за логіку: currentIndex, autoplay, навігація.
 // Не рендерить жодної розмітки слайдів — тільки обгортковий div і Provider.
@@ -35,45 +28,68 @@ if (typeof window !== 'undefined') {
  * @prop {string} classNames.nextBtn    - Кнопка "вперед"
  * @prop {string} classNames.dotsWrap   - Контейнер пагінації
  * @prop {string} classNames.dot        - Одна точка пагінації
+ *
+ * @prop {Object} [breakpoints] - Адаптивні налаштування за шириною екрана.
+ *   Ключі — мінімальна ширина в px, значення — об'єкт з пропсами що перевизначаються.
+ *   ВАЖЛИВО: цей об'єкт має бути memoized (через useMemo або винесений за компонент),
+ *   інакше підписки на media queries будуть ре-створюватись кожен рендер.
  */
-const SliderRoot = forwardRef(({
-   children,
-   direction    = 'horizontal',
-   slidesPerView = 1,
-   autoplay     = false,
-   autoplayDelay = 4000,
-   loop         = true,
-   centeredSlides = false,
-   label        = 'Slider',
-   className,
- }, ref) => {
+const SliderRoot = forwardRef( (props, ref) => {
+  const { breakpoints, children, className, ...rest} = props
+
+  const effectiveProps = useResponsiveProps(rest, breakpoints)
+  const {
+    direction    = 'horizontal',
+    slidesPerView = 1,
+    autoplay     = false,
+    autoplayDelay = 4000,
+    loop         = true,
+    centeredSlides = false,
+    label        = 'Slider',
+    transition,
+  } = effectiveProps
+
   const [currentIndex, setCurrentIndex] = useState(0)
   const [slidesCount, setSlidesCount]   = useState(0)
+  const prefersReducedMotion = usePrefersReducedMotion()
 
   const timerRef = useRef(null)
   const isAnimatingRef = useRef(false)
 
+  // ─── Transition resolution ────────────────────────────────────────────────
+  // 1. Мерджимо з дефолтами щоб користувач міг передати тільки duration
+  //    або тільки easing і не зламати інше.
+  // 2. При reduced motion → duration = 0 (миттєво, без анімації).
+  // 3. useMemo щоб transitionConfig мав стабільну refequality між рендерами
+  //    якщо нічого не змінилось — інакше contextValue буде новим щоразу.
+  const transitionConfig = useMemo(() => {
+    const duration = transition?.duration ?? DEFAULT_TRANSITION.duration
+    const easing = transition?.easing ?? DEFAULT_TRANSITION.easing
+    return {
+      duration: prefersReducedMotion ? 0 : duration,
+      easing,
+    }
+  }, [transition?.duration, transition?.easing, prefersReducedMotion])
+
+  // ─── Navigation ───────────────────────────────────────────────────────────
   // При loop=true currentIndex росте/падає необмежено.
   // Нормалізація до [0, N-1] відбувається в SliderTrack після transitionEnd —
   // це дозволяє швидко листати без стрибків.
   //
   // При loop=false — жорсткі межі через Math.min/max.
   const goToNext = useCallback(() => {
-    if (isAnimatingRef.current) return
     setCurrentIndex(prev =>
       loop ? prev + 1 : Math.min(prev + 1, slidesCount - 1)
     )
   }, [loop, slidesCount])
 
   const goToPrev = useCallback(() => {
-    if (isAnimatingRef.current) return
     setCurrentIndex(prev =>
       loop ? prev - 1 : Math.max(prev - 1, 0)
     )
   }, [loop])
 
   const goToSlide = useCallback((index) => {
-    if (isAnimatingRef.current) return
     setCurrentIndex(index)
   }, [])
 
@@ -89,16 +105,14 @@ const SliderRoot = forwardRef(({
     goToSlide,
   }), [goToNext, goToPrev, goToSlide])
 
-  // ─── Autoplay ────────────────────────────────────────────────────────────────
-  // Зупиняємо при prefersReducedMotion — WCAG 2.1 вимога.
-  // startAutoplay/stopAutoplay винесені в useCallback щоб передати в контекст
-  // для pause on hover/focus з SliderRoot або будь-якого дочірнього компонента.
-  // ─────────────────────────────────────────────────────────────────────────────
+  // ─── Autoplay ─────────────────────────────────────────────────────────────
+  // При reduced motion autoplay блокуємо повністю — це WCAG 2.2.2 вимога
+  // (рухомий контент має бути зупинимий або автоматично зупинятись).
   const startAutoplay = useCallback(() => {
-    if (!autoplay || _prefersReducedMotion) return
+    if (!autoplay || prefersReducedMotion) return
     clearInterval(timerRef.current)
     timerRef.current = setInterval(goToNext, autoplayDelay)
-  }, [autoplay, autoplayDelay, goToNext])
+  }, [autoplay, autoplayDelay, goToNext, prefersReducedMotion])
 
   const stopAutoplay = useCallback(() => {
     clearInterval(timerRef.current)
@@ -108,6 +122,17 @@ const SliderRoot = forwardRef(({
     startAutoplay()
     return stopAutoplay
   }, [startAutoplay, stopAutoplay])
+
+  // ─── Page Visibility (зупинка autoplay при неактивній вкладці) ────────────
+  useEffect(() => {
+    if (!autoplay) return
+    const onVisibilityChange = () => {
+      if (document.hidden) stopAutoplay()
+      else startAutoplay()
+    }
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', onVisibilityChange)
+  }, [autoplay, startAutoplay, stopAutoplay])
 
   // ─── Context value ───────────────────────────────────────────────────────────
   // useMemo критично важливий тут: без нього при кожному рендері SliderRoot
@@ -129,6 +154,7 @@ const SliderRoot = forwardRef(({
     slidesPerView,
     loop,
     centeredSlides,
+    transition: transitionConfig,
     setAnimating: (val) => isAnimatingRef.current = val,
     goToNext,
     goToPrev,
@@ -145,6 +171,7 @@ const SliderRoot = forwardRef(({
     slidesPerView,
     loop,
     centeredSlides,
+    transitionConfig,
     goToNext,
     goToPrev,
     goToSlide,
@@ -154,44 +181,56 @@ const SliderRoot = forwardRef(({
     label,
   ])
 
+  // CSS variables передаємо тут, щоб діти бачили їх через каскад.
+  const rootStyle = useMemo(() => ({
+    '--slider-duration': `${transitionConfig.duration}ms`,
+    '--slider-easing': transitionConfig.easing,
+  }), [transitionConfig])
+
   return (
     <SliderContext.Provider value={contextValue}>
       {/* eslint-disable jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/no-noninteractive-tabindex */}
       <div
-        // role="region" — семантично правильна роль для каруселі за W3C APG.
-        // Створює landmark region — скрінрідер додає в список навігації по сторінці.
-        // Лінтер (jsx-a11y) за замовчуванням не дозволяє tabIndex і onKeyDown
-        // на "не-інтерактивних" ролях — але region є інтерактивним для навігації.
-        // Вирішення: налаштувати лінтер в eslint.config.js додавши 'region' до
-        // дозволених ролей для no-noninteractive-tabindex і no-noninteractive-element-interactions.
-        // Це правильніше ніж hackувати семантику через role="application" чи eslint-disable.
+        // role="region" — створює landmark (точку входу для скрінрідера).
+        // Для роботи region як landmark обов'язковий aria-label або aria-labelledby —
+        // інакше скрінрідер не вважає його landmark. Тому label валідується нижче.
         role="region"
-        // aria-label — унікальна назва цієї каруселі на сторінці.
-        // Споживач передає осмислену назву: "Hero", "Featured products", "Reviews".
-        // Скрінрідер використовує для навігації між landmark regions.
+        // aria-label — людино-читана назва каруселі ("Hero", "Featured products").
+        // Скрінрідер прочитає її при навігації по landmarks.
+        // ВАЖЛИВО: не повинно містити слово "carousel" — aria-roledescription вже про це каже.
         aria-label={label}
-        // aria-roledescription="carousel" — каже скрінрідеру що це карусель.
-        // W3C APG: розміщується на головному контейнері що охоплює всі елементи каруселі.
-        // Скрінрідер оголосить: "Hero, carousel" замість просто "Hero, region".
-        // Примітка: label не має містити слово "carousel" — aria-roledescription вже це робить.
+        // aria-roledescription="carousel" — кастомізація як скрінрідер промовляє роль.
+        // Замість "Hero, region" буде "Hero, carousel".
         aria-roledescription="carousel"
         // клавіатурна навігація стрілками потребує фокусованого елемента.
         // Якщо слайдер не може отримати фокус — стрілки не працюватимуть.
-        tabIndex={0}
         className={clsx(styles.sliderRoot, className)}
+        style={rootStyle}
         // onMouseEnter/Leave — зупиняємо autoplay при hover.
         // WCAG 2.1 критерій 2.2.2: рухомий контент можна зупинити.
         onMouseEnter={stopAutoplay}
         onMouseLeave={startAutoplay}
         onFocus={stopAutoplay}
-        onBlur={startAutoplay}
-        // Клавіатурна навігація — стрілки переключають слайди.
+        onBlur={startAutoplay}  // (ловимо щоб не autoplay-нути коли фокус ще в каруселі)
         // preventDefault() — запобігає скролу сторінки при навігації стрілками.
         onKeyDown={(e) => {
-          if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); goToNext() }
-          if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   { e.preventDefault(); goToPrev() }
+          const isVertical = direction === 'vertical'
+          const nextKey = isVertical ? 'ArrowDown' : 'ArrowRight'
+          const prevKey = isVertical ? 'ArrowUp' : 'ArrowLeft'
+          if (e.key === nextKey) { e.preventDefault(); goToNext() }
+          if (e.key === prevKey) { e.preventDefault(); goToPrev() }
         }}
       >
+        <div
+          // role="status" + aria-live="polite" = слухач AT почує зміни тексту тут
+          // ВАЖЛИВО: не використовуй aria-live="assertive" — переб'є інші повідомлення
+          role="status"
+          aria-live="polite"
+          // Visually hidden — користувач не бачить, але AT читає
+          className={clsx(styles.sliderLiveRegion, "visually-hidden")}
+        >
+          {`Slide ${realActiveIndex + 1} of ${slidesCount}`}
+        </div>
         {children}
       </div>
       {/* eslint-enable jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/no-noninteractive-tabindex */}
