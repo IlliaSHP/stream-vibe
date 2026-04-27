@@ -18,11 +18,11 @@ const HeroSection = (props) => {
     { id: 1, url: img1, title: 'image-1' },
     { id: 2, url: img2, title: 'image-2' },
     { id: 3, url: img3, title: 'image-3' },
-    // { id: 4, url: img4, title: 'image-4' },
-    // { id: 5, url: img5, title: 'image-5' },
-    // { id: 6, url: img5, title: 'image-6' },
-    // { id: 7, url: img5, title: 'image-7' },
-    // { id: 8, url: img5, title: 'image-8' },
+    { id: 4, url: img4, title: 'image-4' },
+    { id: 5, url: img5, title: 'image-5' },
+    { id: 6, url: img5, title: 'image-6' },
+    { id: 7, url: img5, title: 'image-7' },
+    { id: 8, url: img5, title: 'image-8' },
     // { id: 9, url: img5, title: 'image-9' },
     // { id: 10, url: img5, title: 'image-10' },
     // { id: 11, url: img5, title: 'image-11' },
@@ -39,7 +39,7 @@ const HeroSection = (props) => {
   const breakpoints = useMemo(() => ({
     640:  { slidesPerView: 1 },
     1024: {
-      slidesPerView: 1,
+      slidesPerView: 3,
       // direction: "vertical",
       // autoplay: true,
       // autoplayDelay: 1000,
@@ -73,13 +73,15 @@ const HeroSection = (props) => {
 
       <SliderRoot
         ref={sliderRef}
-        loop={true}
+        loop={false}
         slidesPerView={1}
         label="Hero"
         className={styles.heroRoot} // якщо треба кастомізувати сам контейнер
         transition={{ duration: 1200, easing: 'cubic-bezier(0.56, 1, 0.3, 1)' }}
         // transition={{ duration: 200 }}
         breakpoints={breakpoints}
+        // autoplay={true}
+        // autoplayDelay={1000}
       >
         <SliderTrack
           slides={movies.map(m => <img key={m.id} src={m.url} alt={m.title} />)}

@@ -6,9 +6,9 @@ export const useSliderDrag = ({
   N,
   animStateRef,
   currentIndexRef,
-  goToNext,
-  goToPrev,
+  setIndex,                // ← було: goToNext, goToPrev
   getCurrentSlideSize,
+  getCurrentStep,          // ← новий
   getComputedTranslate,
   setDOMTranslate,
   disableTransition,
@@ -24,6 +24,7 @@ export const useSliderDrag = ({
   const getEventPos = (e) => isVertical ? e.clientY : e.clientX
 
   const handlePointerDown = (e) => {
+    if (N <= 1) return
     if (animStateRef.current !== 'idle') {
       // Перехоплюємо поточну CSS-позицію і миттєво зупиняємо анімацію
       const liveTranslate = getComputedTranslate()
@@ -60,21 +61,40 @@ export const useSliderDrag = ({
     if (!isDragging.current) return
     isDragging.current = false
 
-    const delta= getEventPos(e) - startPos.current
-    const threshold = getCurrentSlideSize() * 0.3
+    const delta     = getEventPos(e) - startPos.current
+    const slideSize = getCurrentSlideSize()
+    const step      = getCurrentStep()
+    const minDelta  = slideSize * 0.3   // 30% — нижній поріг "користувач справді хотів перемкнути"
 
     enableTransition()
 
-    const action =
-      delta < -threshold ? goToNext :
-      delta >  threshold ? goToPrev : null
+    // Скільки слайдів пройшов палець. Знак "-" бо delta>0 (палець вправо)
+    // = wrapper рухається вправо = ми йдемо НАЗАД (idx зменшується).
+    //
+    // Symmetric round (як у translateToIndex): JS Math.round(-0.5)=0,
+    // що дає асиметрію між Next і Prev. Round half away from zero — правильніше.
+    let stepsToMove = 0
+    if (Math.abs(delta) >= minDelta && step > 0) {
+      const ratio = -delta / step
+      stepsToMove = ratio < 0 ? -Math.round(-ratio) : Math.round(ratio)
+      // delta достатньо великий, але після округлення вийшов 0
+      // (між threshold і 0.5*step) → мінімум 1 крок у бік delta
+      if (stepsToMove === 0) stepsToMove = -Math.sign(delta)
+    }
 
-    if (action) {
+    if (stepsToMove !== 0) {
       animStateRef.current = 'sliding'
       setAnimating(true)
-      action()
+      // setIndex з updater — щоб не залежати від stale currentIndex.
+      // При loop=false клампимо в [0, N-1]; при loop=true індекс росте необмежено,
+      // нормалізація відбудеться у performNormalization після transitionend.
+      setIndex(prev => {
+        const next = prev + stepsToMove
+        if (loop) return next
+        return Math.max(0, Math.min(N - 1, next))
+      })
     } else {
-      animStateRef.current = 'snapback' // йде анімація повернення на місце (користувач відпустив не дотягнувши)
+      animStateRef.current = 'snapback'
       setAnimating(true)
     }
 

@@ -8,7 +8,7 @@ export const useSliderLoop = ({
   loop,
   N,
   duration,
-  goToSlide,
+  setIndex,
   getTranslateForIndex,
   currentIndexRef,
   animStateRef,
@@ -21,23 +21,11 @@ export const useSliderLoop = ({
   const completedRef = useRef(false)
 
   const performNormalization = () => {
-    console.log('[performNormalization called]', {
-      t: Date.now() % 100000,
-      completedRef: completedRef.current,
-      animState: animStateRef.current,
-      currentIdx: currentIndexRef.current,
-      normalized: normalizeIndex(currentIndexRef.current, N),
-      actualTranslate: wrapperRef.current
-        ? new DOMMatrix(getComputedStyle(wrapperRef.current).transform).m41
-        : 'no-wrapper',
-    })
-
     if (completedRef.current) return  // вже відпрацювало (transitionend або timer)
     completedRef.current = true
 
     clearTimeout(safetyTimerRef.current)
 
-    const prevState = animStateRef.current
     animStateRef.current = 'idle'
     setAnimating(false)
 
@@ -47,12 +35,22 @@ export const useSliderLoop = ({
     const normalized = normalizeIndex(idx, N)
     if (idx === normalized) return // вже нормалізований — нічого робити
 
-    // Синхронно оновлюємо ref — getSlideOffset одразу бачить нове значення
+    // Синхронно оновлюємо ref — drag-handlers і getSlideOffset одразу
+    // бачать нове значення (без чекання на React render).
     currentIndexRef.current = normalized
+
+    // Snap послідовність:
+    //  1. Вимикаємо transition.
+    //  2. Ставимо нову (нормалізовану) позицію wrapper-у.
+    //  3. flushSync(goToSlide) — синхронно оновлюємо React currentIndex,
+    //     щоб у наступному рендері baseTranslate теж був new.
+    //  4. Через 2×rAF знов вмикаємо transition — щоб браузер встиг
+    //     закомітити "transition: none + новий transform" перед тим
+    //     як прийде наступна анімація.
     disableTransition()
     setDOMTranslate(getTranslateForIndex(normalized))
     // Фікс кадру між ре-рендерами (мерехтіння)
-    flushSync(() => goToSlide(normalized))
+    flushSync(() => setIndex(normalized))
 
     // Відновлюємо анімацію після двох rAF (гарантує що browser commit відбувся)
     requestAnimationFrame(() => {
@@ -70,7 +68,8 @@ export const useSliderLoop = ({
   const armSafetyTimer = () => {
     completedRef.current = false
     clearTimeout(safetyTimerRef.current)
-    // duration + 100ms запас на коливання браузера
+    // duration + 100ms запас — на випадок якщо transitionend "загубиться"
+    // (interruption, browser quirks, тощо).
     safetyTimerRef.current = setTimeout(performNormalization, duration + 100)
   }
 

@@ -1,8 +1,10 @@
 import clsx from 'clsx'
 import { useSlider } from './SliderContext'
 
-export const SliderPrevButton = ({ className, children = '‹' }) => {
-  const { goToPrev, realActiveIndex, loop } = useSlider()
+export const SliderPrevButton = ({ className, children = '‹', hideWhenSingleSlide = true }) => {
+  const { goToPrev, realActiveIndex, slidesCount, loop } = useSlider()
+
+  if (hideWhenSingleSlide && slidesCount <= 1) return null
 
   return (
     <button
@@ -17,8 +19,10 @@ export const SliderPrevButton = ({ className, children = '‹' }) => {
   )
 }
 
-export const SliderNextButton = ({ className, children = '›' }) => {
+export const SliderNextButton = ({ className, children = '›', hideWhenSingleSlide = true }) => {
   const { goToNext, realActiveIndex, slidesCount, loop } = useSlider()
+
+  if (hideWhenSingleSlide && slidesCount <= 1) return null
 
   return (
     <button

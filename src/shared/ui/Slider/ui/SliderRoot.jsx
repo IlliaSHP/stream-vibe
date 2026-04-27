@@ -53,23 +53,27 @@ const SliderRoot = forwardRef( (props, ref) => {
   const [slidesCount, setSlidesCount]   = useState(0)
   const prefersReducedMotion = usePrefersReducedMotion()
 
-  const timerRef = useRef(null)
-  const isAnimatingRef = useRef(false)
+  // ─── Animation state (лежить тут, а не в ref) ─────────────────────────────
+  // Раніше було isAnimatingRef — він не тригерив ре-рендер, тому autoplay-ефект
+  // не міг "прокинутись" коли анімація завершилась. Тепер це справжній state:
+  // setAnimating(true)  ← викликає Track при currentIndex change і drag snapback
+  // setAnimating(false) ← викликає useSliderLoop.performNormalization (transitionend
+  //                       або safety timer) та useSliderDrag.handlePointerDown (коли
+  //                       перехоплює анімацію).
+  // Завдяки тому, що це state, autoplay-ефект ре-планується автоматично коли
+  // анімація завершується.
+  const [isAnimating, setIsAnimating] = useState(false)
 
-  // ─── Transition resolution ────────────────────────────────────────────────
-  // 1. Мерджимо з дефолтами щоб користувач міг передати тільки duration
-  //    або тільки easing і не зламати інше.
-  // 2. При reduced motion → duration = 0 (миттєво, без анімації).
-  // 3. useMemo щоб transitionConfig мав стабільну refequality між рендерами
-  //    якщо нічого не змінилось — інакше contextValue буде новим щоразу.
-  const transitionConfig = useMemo(() => {
-    const duration = transition?.duration ?? DEFAULT_TRANSITION.duration
-    const easing = transition?.easing ?? DEFAULT_TRANSITION.easing
-    return {
-      duration: prefersReducedMotion ? 0 : duration,
-      easing,
-    }
-  }, [transition?.duration, transition?.easing, prefersReducedMotion])
+  // ─── Pause counter ────────────────────────────────────────────────────────
+  // Decrementable counter, як у Embla: кожен джерело паузи (hover, focus,
+  // drag, hidden tab) ставить +1, відпускання робить -1. autoplay-ефект
+  // дивиться лише на `pauseCount > 0`. Counter (а не bool) потрібен бо
+  // джерела можуть перетинатись: hover + drag → 2; lose hover → 1 (drag ще
+  // тримає); drag end → 0.
+  const [pauseCount, setPauseCount] = useState(0)
+  const pauseAutoplay  = useCallback(() => setPauseCount(c => c + 1), [])
+  const resumeAutoplay = useCallback(() => setPauseCount(c => Math.max(0, c - 1)), [])
+  const autoplayPaused = pauseCount > 0
 
   // ─── Navigation ───────────────────────────────────────────────────────────
   // При loop=true currentIndex росте/падає необмежено.
@@ -89,8 +93,33 @@ const SliderRoot = forwardRef( (props, ref) => {
     )
   }, [loop])
 
+  // ─── goToSlide з shortest-path логікою (лише при loop=true) ───────────────
+  // При loop=true currentIndex росте необмежено (5, 6, 7, ...). На екрані
+  // користувач бачить normalizeIndex(currentIndex). Shortest path означає:
+  // знайти, скільки кроків (в +/- сторону) треба додати до сирого currentIndex,
+  // щоб видимий слайд став = target. У межах одного циклу [-N/2, +N/2] —
+  // це і є найкоротший шлях. Loop-машинерія в Track підхопить telerort через
+  // getSlideOffset так само, як і при ручному gotoNext().
+  //
+  // При loop=false shortest path неможливий — циклу немає. Просто переходимо
+  // на index напряму (через всі слайди — це очікувана поведінка для not-loop).
   const goToSlide = useCallback((index) => {
-    setCurrentIndex(index)
+    setCurrentIndex(prev => {
+      if (!loop || slidesCount <= 1) return index
+      const realCurrent = normalizeIndex(prev, slidesCount)
+      let diff = index - realCurrent
+      if (diff >  slidesCount / 2) diff -= slidesCount
+      else if (diff < -slidesCount / 2) diff += slidesCount
+      return prev + diff
+    })
+  }, [loop, slidesCount])
+
+  // Технічний raw-сетер для useSliderLoop.
+  // goToSlide має shortest-path логіку для UI-навігації, але performNormalization
+  // потребує "тупо постав state у це значення" — інакше React не оновить DOM
+  // після teleport-snap, бо думатиме що нічого не змінилось.
+  const setIndexRaw = useCallback((indexOrUpdater) => {
+    setCurrentIndex(indexOrUpdater)
   }, [])
 
   const registerSlides = useCallback(count => setSlidesCount(count), [])
@@ -105,34 +134,71 @@ const SliderRoot = forwardRef( (props, ref) => {
     goToSlide,
   }), [goToNext, goToPrev, goToSlide])
 
-  // ─── Autoplay ─────────────────────────────────────────────────────────────
-  // При reduced motion autoplay блокуємо повністю — це WCAG 2.2.2 вимога
-  // (рухомий контент має бути зупинимий або автоматично зупинятись).
-  const startAutoplay = useCallback(() => {
-    if (!autoplay || prefersReducedMotion) return
-    clearInterval(timerRef.current)
-    timerRef.current = setInterval(goToNext, autoplayDelay)
-  }, [autoplay, autoplayDelay, goToNext, prefersReducedMotion])
+  // ─── Transition resolution ────────────────────────────────────────────────
+  // 1. Мерджимо з дефолтами щоб користувач міг передати тільки duration
+  //    або тільки easing і не зламати інше.
+  // 2. При reduced motion → duration = 0 (миттєво, без анімації).
+  // 3. useMemo щоб transitionConfig мав стабільну refequality між рендерами
+  //    якщо нічого не змінилось — інакше contextValue буде новим щоразу.
+  const transitionConfig = useMemo(() => {
+    const duration = transition?.duration ?? DEFAULT_TRANSITION.duration
+    const easing = transition?.easing ?? DEFAULT_TRANSITION.easing
+    return {
+      duration: prefersReducedMotion ? 0 : duration,
+      easing,
+    }
+  }, [transition?.duration, transition?.easing, prefersReducedMotion])
 
-  const stopAutoplay = useCallback(() => {
-    clearInterval(timerRef.current)
-  }, [])
-
+  // ─── Autoplay як "wait-for-transition" state machine ──────────────────────
+  // Інваріант: реальний цикл = (час анімації) + (autoplayDelay).
+  // autoplayDelay — час спокою на слайді. Те саме як у Swiper.
+  //
+  // Як це працює:
+  //  1. isAnimating=false, не paused → планується setTimeout на autoplayDelay.
+  //  2. Таймер вистрелив → currentIndex++ → Track запускає анімацію.
+  //  3. Track викликає setAnimating(true) у своєму ефекті [currentIndex].
+  //  4. Зміна isAnimating ре-рендерить Root → cleanup старого ефекту
+  //     (там нема чого чистити, таймер уже відпрацював) → новий ефект
+  //     бачить isAnimating=true → нічого не планує.
+  //  5. Анімація закінчилась → performNormalization() в useSliderLoop
+  //     викликає setAnimating(false).
+  //  6. Знов ре-рендер → ефект бачить isAnimating=false → планує таймер.
+  //
+  // Чому це краще за setInterval з фіксованим інтервалом:
+  //  • Якщо duration > autoplayDelay (рідкісний кейс, але буває) — autoplay
+  //    не намагається стартувати анімацію поверх вже існуючої.
+  //  • transitionend та safety timer (вже існують у useSliderLoop) дають
+  //    точне знання "анімація завершилась" — нам не треба дублювати
+  //    їх через окремий setTimeout(duration + buffer).
+  //  • Drag паузить через pauseAutoplay (з Track-у): поки палець на слайдері,
+  //    цикл стоїть; відпустив — продовжився.
   useEffect(() => {
-    startAutoplay()
-    return stopAutoplay
-  }, [startAutoplay, stopAutoplay])
+    if (!autoplay || prefersReducedMotion) return
+    if (slidesCount <= 1) return
+    if (isAnimating) return
+    if (autoplayPaused) return
 
-  // ─── Page Visibility (зупинка autoplay при неактивній вкладці) ────────────
+    const id = setTimeout(() => {
+      setCurrentIndex(prev => prev + 1)
+      // Завжди інкремент. Strategy B: при loop=false useSliderLoop підхопить
+      // вихід за межі і плавно "телепортує" перший слайд — без різкого
+      // звороту назад через всі слайди.
+    }, autoplayDelay)
+
+    return () => clearTimeout(id)
+  }, [autoplay, prefersReducedMotion, slidesCount, isAnimating, autoplayPaused, autoplayDelay])
+
+
+  // ─── Page Visibility (зупинка autoplay при неактивній вкладці) ──────────────────────────────────────────────────────
   useEffect(() => {
     if (!autoplay) return
     const onVisibilityChange = () => {
-      if (document.hidden) stopAutoplay()
-      else startAutoplay()
+      if (document.hidden) pauseAutoplay()
+      else resumeAutoplay()
     }
     document.addEventListener('visibilitychange', onVisibilityChange)
     return () => document.removeEventListener('visibilitychange', onVisibilityChange)
-  }, [autoplay, startAutoplay, stopAutoplay])
+  }, [autoplay, pauseAutoplay, resumeAutoplay])
 
   // ─── Context value ───────────────────────────────────────────────────────────
   // useMemo критично важливий тут: без нього при кожному рендері SliderRoot
@@ -155,13 +221,14 @@ const SliderRoot = forwardRef( (props, ref) => {
     loop,
     centeredSlides,
     transition: transitionConfig,
-    setAnimating: (val) => isAnimatingRef.current = val,
+    setAnimating: setIsAnimating,
+    pauseAutoplay,                  // Track викликає на drag start
+    resumeAutoplay,                 // Track викликає на drag end
     goToNext,
     goToPrev,
     goToSlide,
+    setIndexRaw,
     registerSlides,
-    startAutoplay,
-    stopAutoplay,
     label,
   }), [
     currentIndex,
@@ -172,12 +239,13 @@ const SliderRoot = forwardRef( (props, ref) => {
     loop,
     centeredSlides,
     transitionConfig,
+    pauseAutoplay,
+    resumeAutoplay,
     goToNext,
     goToPrev,
     goToSlide,
+    setIndexRaw,
     registerSlides,
-    startAutoplay,
-    stopAutoplay,
     label,
   ])
 
@@ -208,12 +276,13 @@ const SliderRoot = forwardRef( (props, ref) => {
         style={rootStyle}
         // onMouseEnter/Leave — зупиняємо autoplay при hover.
         // WCAG 2.1 критерій 2.2.2: рухомий контент можна зупинити.
-        onMouseEnter={stopAutoplay}
-        onMouseLeave={startAutoplay}
-        onFocus={stopAutoplay}
-        onBlur={startAutoplay}  // (ловимо щоб не autoplay-нути коли фокус ще в каруселі)
+        onMouseEnter={autoplay ? pauseAutoplay : undefined}
+        onMouseLeave={autoplay ? resumeAutoplay : undefined}
+        onFocus={autoplay ? pauseAutoplay : undefined}
+        onBlur={autoplay ? resumeAutoplay : undefined}  // (ловимо щоб не autoplay-нути коли фокус ще в каруселі)
         // preventDefault() — запобігає скролу сторінки при навігації стрілками.
         onKeyDown={(e) => {
+          if (slidesCount <= 1) return
           const isVertical = direction === 'vertical'
           const nextKey = isVertical ? 'ArrowDown' : 'ArrowRight'
           const prevKey = isVertical ? 'ArrowUp' : 'ArrowLeft'

@@ -7,7 +7,7 @@ export const useSliderMousewheel = ({
   isVertical,
   goToNext,
   goToPrev,
-  animStateRef,
+  slidesCount
 }) => {
   useEffect(() => {
     if (!enabled) return
@@ -18,6 +18,7 @@ export const useSliderMousewheel = ({
     const COOLDOWN_MS = 300  // не реагуємо на події частіше ніж раз на 300ms
 
     const onWheel = (e) => {
+      if (slidesCount <= 1) return
       const now = Date.now()
       if (now - lastFireTime < COOLDOWN_MS) return
 

@@ -1,8 +1,10 @@
 import clsx from 'clsx'
 import { useSlider } from './SliderContext'
 
-const SliderDots = ({ slideLabels = [], classNames = {}, }) => {
-  const { realActiveIndex, slidesCount, goToSlide, label } = useSlider()
+const SliderDots = ({ slideLabels = [], classNames = {}, hideWhenSingleSlide = true, }) => {
+  const { realActiveIndex, slidesCount, goToSlide, label, } = useSlider()
+
+  if (hideWhenSingleSlide && slidesCount <= 1) return null
 
   return (
     <div
